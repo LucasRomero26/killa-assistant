@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: oklch(15% 0.008 260);
+    --bg-surface: oklch(19% 0.008 260);
+    --bg-elevated: oklch(24% 0.008 260);
+    --bg-input: oklch(16% 0.008 260);
+    --border: oklch(30% 0.008 260);
+    --border-hover: oklch(42% 0.01 260);
+    --text-primary: oklch(93% 0.003 260);
+    --text-secondary: oklch(72% 0.008 260);
+    --text-tertiary: oklch(55% 0.008 260);
+    --accent: oklch(72% 0.14 260);
+    --accent-hover: oklch(78% 0.14 260);
+    --accent-foreground: oklch(15% 0.008 260);
+    --success: oklch(72% 0.17 155);
+    --warning: oklch(75% 0.15 75);
+    --error: oklch(70% 0.18 25);
+    --focus-ring: oklch(72% 0.14 260 / 0.5);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--bg);
+    background-image: radial-gradient(ellipse 80% 50% at 50% -20%, oklch(25% 0.02 260 / 0.4), transparent);
+    color: var(--text-primary);
+    margin: 0;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover);
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .surface {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    transition: border-color 200ms ease-out, background-color 200ms ease-out, box-shadow 200ms ease-out;
+  }
+
+  .surface-elevated {
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border);
+  }
+
+  .surface:hover {
+    border-color: var(--border-hover);
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--bg-surface) 0%,
+      var(--bg-elevated) 50%,
+      var(--bg-surface) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+}

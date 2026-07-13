@@ -1,0 +1,65 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build and deploy to DigitalOcean
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    env:
+      DROPLET_IP: ${{ secrets.DROPLET_IP }}
+      REMOTE_DIR: /opt/killa-assistant
+      HEALTH_URL: ${{ secrets.HEALTH_URL }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Compile TypeScript
+        run: npm run build
+        working-directory: backend
+
+      - name: Copy dist/ to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.DROPLET_IP }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          source: backend/dist
+          target: ${{ env.REMOTE_DIR }}/backend/
+
+      - name: Pull latest code and restart container
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ env.DROPLET_IP }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            cd ${{ env.REMOTE_DIR }}
+            git pull origin main
+            docker compose down
+            docker compose up -d --build
+
+      - name: Health check
+        run: |
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+          if [ "$STATUS" = "200" ]; then
+            echo "Backend is healthy"
+          else
+            echo "Health check failed (HTTP $STATUS)"
+            exit 1
+          fi
