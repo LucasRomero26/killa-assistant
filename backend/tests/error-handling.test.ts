@@ -61,6 +61,8 @@ vi.mock("../src/services/pending-media.js", () => ({
 
 vi.mock("../src/services/google-auth.js", () => ({
   getOAuthClientForUser: vi.fn().mockResolvedValue(null),
+  getUserGrantedScopes: vi.fn().mockResolvedValue([]),
+  hasRestrictedDriveScope: vi.fn(() => false),
 }));
 
 vi.mock("../src/services/google-tools.js", () => ({

@@ -1,5 +1,5 @@
 import { chatCompletion } from "../services/nvidia.js";
-import { getOAuthClientForUser } from "../services/google-auth.js";
+import { getOAuthClientForUser, getUserGrantedScopes, hasRestrictedDriveScope } from "../services/google-auth.js";
 import {
   calendarTools,
   driveTools,
@@ -13,6 +13,13 @@ import type { ChatMessage, ToolCall, ToolDefinition, PendingMedia } from "../typ
 const ALL_TOOLS: ToolDefinition[] = [...calendarTools, ...driveTools];
 const MAX_TOOL_ROUNDS = 5;
 
+function filterToolsForUser(allTools: ToolDefinition[], grantedScopes: string[]): ToolDefinition[] {
+  if (hasRestrictedDriveScope(grantedScopes)) {
+    return allTools;
+  }
+  return allTools.filter((t) => t.function.name !== "drive_search_files");
+}
+
 export async function processMessageWithTools(
   systemPrompt: string,
   userMessage: string,
@@ -24,6 +31,9 @@ export async function processMessageWithTools(
     mediaResolver?: MediaBufferResolver;
   }
 ): Promise<string> {
+  const grantedScopes = await getUserGrantedScopes(userId);
+  const tools = filterToolsForUser(ALL_TOOLS, grantedScopes);
+
   const messages: ChatMessage[] = [
     { role: "system", content: systemPrompt },
     { role: "user", content: userMessage },
@@ -34,7 +44,7 @@ export async function processMessageWithTools(
     : undefined;
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const response = await chatCompletion(messages, { tools: ALL_TOOLS, ...chatOptions });
+    const response = await chatCompletion(messages, { tools, ...chatOptions });
 
     if (response.toolCalls.length === 0) {
       return response.content ?? "I could not generate a response.";

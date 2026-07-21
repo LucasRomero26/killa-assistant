@@ -4,10 +4,14 @@ import { getAuthUrl, exchangeCodeForTokens, storeGoogleCredentials, disconnectGo
 import { signState, verifyState } from "../utils/oauth-state.js";
 import { logActivity } from "../utils/activity-log.js";
 import { extractUserIdOptional } from "../utils/auth-middleware.js";
+import { isUserVip } from "../services/user-vip.js";
 
 export async function authRoutes(app: FastifyInstance) {
   // GET /api/auth/google — Starts the Google OAuth flow.
   // userId comes from the JWT (Bearer token), NOT from the query string.
+  // VIP users are granted restricted scopes (calendar + drive); everyone else
+  // gets light scopes (calendar.events + drive.file) which don't trigger the
+  // Google unverified-app screen.
   app.get("/google", {
     config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -17,10 +21,11 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.code(401).send({ error: "Authentication required" });
     }
 
+    const vip = await isUserVip(userId);
     const state = signState(userId);
-    const url = getAuthUrl(state);
+    const url = getAuthUrl(state, vip);
 
-    request.log.info({ userId }, "Starting Google OAuth flow");
+    request.log.info({ userId, vip }, "Starting Google OAuth flow");
     return reply.code(302).redirect(url);
   });
 

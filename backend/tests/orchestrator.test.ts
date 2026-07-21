@@ -17,6 +17,10 @@ vi.mock("../src/services/nvidia.js", () => ({
 
 vi.mock("../src/services/google-auth.js", () => ({
   getOAuthClientForUser: vi.fn(),
+  getUserGrantedScopes: vi.fn().mockResolvedValue([]),
+  hasRestrictedDriveScope: vi.fn((scopes: string[]) =>
+    scopes.includes("https://www.googleapis.com/auth/drive")
+  ),
 }));
 
 vi.mock("../src/services/google-tools.js", () => ({
@@ -31,11 +35,41 @@ vi.mock("../src/utils/activity-log.js", () => ({
 }));
 
 import { chatCompletion } from "../src/services/nvidia.js";
-import { getOAuthClientForUser } from "../src/services/google-auth.js";
+import { getOAuthClientForUser, getUserGrantedScopes, hasRestrictedDriveScope } from "../src/services/google-auth.js";
 import { executeCalendarTool } from "../src/services/google-tools.js";
 import { processMessageWithTools } from "../src/mcp/orchestrator.js";
 
 const SYSTEM_PROMPT = "You are KillaAssistant.";
+
+describe("MCP orchestrator - scope-based tool filtering", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should expose drive_search_files when user has restricted drive scope", async () => {
+    vi.mocked(getUserGrantedScopes).mockResolvedValueOnce([
+      "https://www.googleapis.com/auth/calendar",
+      "https://www.googleapis.com/auth/drive",
+    ]);
+    vi.mocked(hasRestrictedDriveScope).mockReturnValueOnce(true);
+    vi.mocked(chatCompletion).mockResolvedValueOnce({ content: "ok", toolCalls: [] });
+
+    await processMessageWithTools(SYSTEM_PROMPT, "hi", "user-vip");
+
+    const callOpts = (vi.mocked(chatCompletion).mock.calls[0] as unknown as [unknown, { tools?: unknown }])[1];
+    expect(callOpts?.tools).toBeDefined();
+    expect(Array.isArray(callOpts?.tools)).toBe(true);
+  });
+
+  it("should still call chatCompletion when user has empty scopes", async () => {
+    vi.mocked(getUserGrantedScopes).mockResolvedValueOnce([]);
+    vi.mocked(hasRestrictedDriveScope).mockReturnValueOnce(false);
+    vi.mocked(chatCompletion).mockResolvedValueOnce({ content: "ok", toolCalls: [] });
+
+    const result = await processMessageWithTools(SYSTEM_PROMPT, "hi", "user-regular");
+    expect(result).toBe("ok");
+  });
+});
 
 describe("MCP orchestrator - ambiguous intent handling", () => {
   beforeEach(() => {

@@ -6,7 +6,12 @@ import { supabaseAdmin } from "../config/supabase.js";
 
 type OAuth2Client = Auth.OAuth2Client;
 
-const SCOPES = [
+const LIGHT_SCOPES = [
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/drive.file",
+];
+
+const VIP_SCOPES = [
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/drive",
 ];
@@ -19,12 +24,13 @@ export function createOAuthClient(): OAuth2Client {
   );
 }
 
-export function getAuthUrl(state: string): string {
+export function getAuthUrl(state: string, vip: boolean = false): string {
   const client = createOAuthClient();
   return client.generateAuthUrl({
     access_type: "offline",
-    scope: SCOPES,
+    scope: vip ? VIP_SCOPES : LIGHT_SCOPES,
     prompt: "consent",
+    include_granted_scopes: true,
     state,
   });
 }
@@ -34,6 +40,7 @@ export async function exchangeCodeForTokens(code: string) {
   const { tokens } = await client.getToken(code);
   return tokens;
 }
+
 
 export async function storeGoogleCredentials(userId: string, tokens: Auth.Credentials) {
   const encryptedAccess = tokens.access_token ? encrypt(tokens.access_token) : null;
@@ -166,4 +173,21 @@ export async function getOAuthClientForUser(userId: string): Promise<OAuth2Clien
   });
 
   return client;
+}
+
+export async function getUserGrantedScopes(userId: string): Promise<string[]> {
+  const { data } = await supabaseAdmin
+    .from("credenciales_google")
+    .select("scope")
+    .eq("user_id", userId)
+    .single();
+
+  if (!data?.scope) return [];
+  return data.scope.split(" ").filter(Boolean);
+}
+
+export function hasRestrictedDriveScope(grantedScopes: string[]): boolean {
+  return grantedScopes.some(
+    (s) => s === "https://www.googleapis.com/auth/drive"
+  );
 }

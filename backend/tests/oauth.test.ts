@@ -10,6 +10,10 @@ vi.mock("../src/services/google-auth.js", () => ({
   disconnectGoogle: vi.fn(),
 }));
 
+vi.mock("../src/services/user-vip.js", () => ({
+  isUserVip: vi.fn().mockResolvedValue(false),
+}));
+
 vi.mock("../src/utils/activity-log.js", () => ({
   logActivity: vi.fn().mockResolvedValue(undefined),
 }));
@@ -38,6 +42,7 @@ vi.mock("../src/config/supabase.js", () => {
 
 import { authRoutes } from "../src/routes/auth.js";
 import { getAuthUrl, exchangeCodeForTokens, storeGoogleCredentials } from "../src/services/google-auth.js";
+import { isUserVip } from "../src/services/user-vip.js";
 import { verifyState } from "../src/utils/oauth-state.js";
 import { logActivity } from "../src/utils/activity-log.js";
 
@@ -67,6 +72,22 @@ describe("Google OAuth routes", () => {
       expect(res.statusCode).toBe(302);
       expect(res.headers.location).toContain("accounts.google.com");
       expect(getAuthUrl).toHaveBeenCalledTimes(1);
+      expect(getAuthUrl).toHaveBeenCalledWith("state-for-user-42", false);
+      await app.close();
+    });
+
+    it("should pass vip=true to getAuthUrl when user is VIP", async () => {
+      vi.mocked(isUserVip).mockResolvedValue(true);
+      const app = await buildApp();
+
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/auth/google",
+        headers: { authorization: "Bearer test-jwt-token" },
+      });
+
+      expect(res.statusCode).toBe(302);
+      expect(getAuthUrl).toHaveBeenCalledWith("state-for-user-42", true);
       await app.close();
     });
 
