@@ -54,17 +54,49 @@ async function fetchWithTimeout(
   }
 }
 
+/**
+ * Send a text message to a Telegram chat.
+ *
+ * Telegram's Markdown parser is strict — any unbalanced `_`, `*`, `` ` `` or
+ * `[` in the message body causes the request to fail with HTTP 400
+ * ("can't parse entities: Can't find end of the entity starting at byte
+ * offset N"). The LLM frequently emits such characters in Spanish responses
+ * (e.g. "Guardé la imagen en _Imagenes_Eventos_..." with a stray underscore
+ * in the middle of a word).
+ *
+ * Strategy:
+ *  1. Try sending with `parse_mode: "Markdown"` (preserves bold/italic/etc).
+ *  2. If Telegram rejects it, retry WITHOUT parse_mode — Telegram then treats
+ *     the text as plain text and never fails on malformed entities.
+ *
+ * The retry is cheap (one extra HTTP roundtrip only on the error path) and
+ * guarantees the user always receives a reply, even when the LLM produces
+ * malformed Markdown.
+ */
 export async function sendMessage(chatId: number, text: string): Promise<void> {
+  await sendMessageWithMode(chatId, text, "Markdown").catch((err) => {
+    if (err instanceof TelegramError && err.statusCode === 400) {
+      // Malformed entities — retry as plain text.
+      return sendMessageWithMode(chatId, text, undefined);
+    }
+    throw err;
+  });
+}
+
+async function sendMessageWithMode(
+  chatId: number,
+  text: string,
+  parseMode: "Markdown" | "HTML" | undefined
+): Promise<void> {
+  const body: Record<string, unknown> = { chat_id: chatId, text };
+  if (parseMode) body.parse_mode = parseMode;
+
   const response = await fetchWithTimeout(
     `${TELEGRAM_BASE_URL}/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: "Markdown",
-      }),
+      body: JSON.stringify(body),
     }
   );
 
