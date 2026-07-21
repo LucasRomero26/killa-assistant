@@ -6,7 +6,14 @@ vi.mock("../src/services/google-auth.js", () => ({
   getAuthUrl: vi.fn(),
   exchangeCodeForTokens: vi.fn(),
   storeGoogleCredentials: vi.fn(),
-  getGoogleConnectionStatus: vi.fn(),
+  getGoogleConnectionStatus: vi.fn().mockResolvedValue({
+    connected: false,
+    calendar_connected: false,
+    drive_connected: false,
+    has_refresh_token: false,
+    expiry_date: null,
+  }),
+  getUserGrantedScopes: vi.fn().mockResolvedValue([]),
   disconnectGoogle: vi.fn(),
 }));
 
@@ -41,7 +48,13 @@ vi.mock("../src/config/supabase.js", () => {
 });
 
 import { authRoutes } from "../src/routes/auth.js";
-import { getAuthUrl, exchangeCodeForTokens, storeGoogleCredentials } from "../src/services/google-auth.js";
+import {
+  getAuthUrl,
+  exchangeCodeForTokens,
+  storeGoogleCredentials,
+  getGoogleConnectionStatus,
+  getUserGrantedScopes,
+} from "../src/services/google-auth.js";
 import { isUserVip } from "../src/services/user-vip.js";
 import { verifyState } from "../src/utils/oauth-state.js";
 import { logActivity } from "../src/utils/activity-log.js";
@@ -57,10 +70,22 @@ describe("Google OAuth routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getAuthUrl).mockReturnValue("https://accounts.google.com/o/oauth2/auth?state=xyz");
+    // Defaults: non-VIP, not connected, no refresh_token, no granted scopes.
+    // Individual tests override these as needed.
+    vi.mocked(isUserVip).mockResolvedValue(false);
+    vi.mocked(getGoogleConnectionStatus).mockResolvedValue({
+      connected: false,
+      calendar_connected: false,
+      drive_connected: false,
+      has_refresh_token: false,
+      expiry_date: null,
+    });
+    vi.mocked(getUserGrantedScopes).mockResolvedValue([]);
   });
 
   describe("GET /api/auth/google", () => {
     it("should redirect to Google consent URL with signed state (JWT auth)", async () => {
+      // Not connected yet → forceConsent=true
       const app = await buildApp();
 
       const res = await app.inject({
@@ -72,11 +97,11 @@ describe("Google OAuth routes", () => {
       expect(res.statusCode).toBe(302);
       expect(res.headers.location).toContain("accounts.google.com");
       expect(getAuthUrl).toHaveBeenCalledTimes(1);
-      expect(getAuthUrl).toHaveBeenCalledWith("state-for-user-42", false);
+      expect(getAuthUrl).toHaveBeenCalledWith("state-for-user-42", false, true);
       await app.close();
     });
 
-    it("should pass vip=true to getAuthUrl when user is VIP", async () => {
+    it("should pass vip=true and forceConsent=true to getAuthUrl when user is VIP and not yet connected", async () => {
       vi.mocked(isUserVip).mockResolvedValue(true);
       const app = await buildApp();
 
@@ -87,7 +112,85 @@ describe("Google OAuth routes", () => {
       });
 
       expect(res.statusCode).toBe(302);
-      expect(getAuthUrl).toHaveBeenCalledWith("state-for-user-42", true);
+      expect(getAuthUrl).toHaveBeenCalledWith("state-for-user-42", true, true);
+      await app.close();
+    });
+
+    it("should use forceConsent=false when already connected with refresh_token and scopes are sufficient", async () => {
+      // Non-VIP user, already connected, with refresh_token → no need to
+      // force consent (preserves the existing refresh_token).
+      vi.mocked(getGoogleConnectionStatus).mockResolvedValue({
+        connected: true,
+        calendar_connected: true,
+        drive_connected: true,
+        has_refresh_token: true,
+        expiry_date: new Date(Date.now() + 3600_000).toISOString(),
+      });
+      const app = await buildApp();
+
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/auth/google",
+        headers: { authorization: "Bearer test-jwt-token" },
+      });
+
+      expect(res.statusCode).toBe(302);
+      expect(getAuthUrl).toHaveBeenCalledWith("state-for-user-42", false, false);
+      await app.close();
+    });
+
+    it("should forceConsent=true for VIP user whose scopes are missing restricted scopes", async () => {
+      // VIP user but granted scopes only include light scopes → must force
+      // consent to upgrade to restricted scopes.
+      vi.mocked(isUserVip).mockResolvedValue(true);
+      vi.mocked(getGoogleConnectionStatus).mockResolvedValue({
+        connected: true,
+        calendar_connected: true,
+        drive_connected: true,
+        has_refresh_token: true,
+        expiry_date: new Date(Date.now() + 3600_000).toISOString(),
+      });
+      vi.mocked(getUserGrantedScopes).mockResolvedValue([
+        "https://www.googleapis.com/auth/calendar.events",
+        "https://www.googleapis.com/auth/drive.file",
+      ]);
+      const app = await buildApp();
+
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/auth/google",
+        headers: { authorization: "Bearer test-jwt-token" },
+      });
+
+      expect(res.statusCode).toBe(302);
+      expect(getAuthUrl).toHaveBeenCalledWith("state-for-user-42", true, true);
+      await app.close();
+    });
+
+    it("should use forceConsent=false for VIP user whose scopes already include restricted scopes", async () => {
+      // VIP user already has full VIP scopes → no need to re-prompt.
+      vi.mocked(isUserVip).mockResolvedValue(true);
+      vi.mocked(getGoogleConnectionStatus).mockResolvedValue({
+        connected: true,
+        calendar_connected: true,
+        drive_connected: true,
+        has_refresh_token: true,
+        expiry_date: new Date(Date.now() + 3600_000).toISOString(),
+      });
+      vi.mocked(getUserGrantedScopes).mockResolvedValue([
+        "https://www.googleapis.com/auth/calendar",
+        "https://www.googleapis.com/auth/drive",
+      ]);
+      const app = await buildApp();
+
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/auth/google",
+        headers: { authorization: "Bearer test-jwt-token" },
+      });
+
+      expect(res.statusCode).toBe(302);
+      expect(getAuthUrl).toHaveBeenCalledWith("state-for-user-42", true, false);
       await app.close();
     });
 

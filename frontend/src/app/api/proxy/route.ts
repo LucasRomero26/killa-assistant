@@ -35,9 +35,17 @@ async function proxyRequest(
   }
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     "Authorization": `Bearer ${accessToken}`,
   };
+
+  // Only send Content-Type: application/json when we actually have a body.
+  // Fastify rejects requests that declare a JSON content-type but have an
+  // empty body ("Body cannot be empty when content-type is set to
+  // 'application/json'"), which is exactly what happens on DELETE endpoints
+  // that take no body (e.g. /api/auth/google/disconnect).
+  if (body) {
+    headers["Content-Type"] = "application/json";
+  }
 
   try {
     const backendRes = await fetch(url, {
@@ -78,9 +86,15 @@ async function handleRequest(request: Request, method: string) {
   }
 
   let body: string | undefined;
-  if (method !== "GET" && method !== "DELETE") {
+  if (method !== "GET") {
     try {
-      body = JSON.stringify(await request.json());
+      const raw = await request.text();
+      // Only forward a body if the client actually sent one. For DELETE this
+      // is typically empty, and forwarding an empty string would cause Fastify
+      // to reject the request if we also set Content-Type: application/json.
+      if (raw.length > 0) {
+        body = raw;
+      }
     } catch {
       body = undefined;
     }

@@ -1,10 +1,27 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { env } from "../config/env.js";
-import { getAuthUrl, exchangeCodeForTokens, storeGoogleCredentials, disconnectGoogle } from "../services/google-auth.js";
+import {
+  getAuthUrl,
+  exchangeCodeForTokens,
+  storeGoogleCredentials,
+  disconnectGoogle,
+  getGoogleConnectionStatus,
+  getUserGrantedScopes,
+} from "../services/google-auth.js";
 import { signState, verifyState } from "../utils/oauth-state.js";
 import { logActivity } from "../utils/activity-log.js";
 import { extractUserIdOptional } from "../utils/auth-middleware.js";
 import { isUserVip } from "../services/user-vip.js";
+
+const VIP_SCOPE_SET = new Set([
+  "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/drive",
+]);
+
+function hasAllVipScopes(granted: string[]): boolean {
+  if (granted.length === 0) return false;
+  return [...VIP_SCOPE_SET].every((s) => granted.includes(s));
+}
 
 export async function authRoutes(app: FastifyInstance) {
   // GET /api/auth/google — Starts the Google OAuth flow.
@@ -12,6 +29,13 @@ export async function authRoutes(app: FastifyInstance) {
   // VIP users are granted restricted scopes (calendar + drive); everyone else
   // gets light scopes (calendar.events + drive.file) which don't trigger the
   // Google unverified-app screen.
+  //
+  // We force `prompt: "consent"` ONLY when:
+  //   - the user has NO Google credentials yet (first connection), OR
+  //   - the user is VIP but their current granted scopes are missing one of
+  //     the restricted scopes (scope upgrade path).
+  // Otherwise we use `select_account` to avoid nulling out the refresh token
+  // (Google only returns a new refresh_token on the first consent).
   app.get("/google", {
     config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -22,10 +46,23 @@ export async function authRoutes(app: FastifyInstance) {
     }
 
     const vip = await isUserVip(userId);
-    const state = signState(userId);
-    const url = getAuthUrl(state, vip);
+    const status = await getGoogleConnectionStatus(userId);
+    const grantedScopes = await getUserGrantedScopes(userId);
 
-    request.log.info({ userId, vip }, "Starting Google OAuth flow");
+    // First connection: no credentials yet → force consent to get a refresh_token.
+    // VIP scope upgrade: user is VIP but their existing scopes don't include
+    // the restricted calendar/drive scopes → force consent to re-prompt.
+    let forceConsent = false;
+    if (!status.connected || !status.has_refresh_token) {
+      forceConsent = true;
+    } else if (vip && !hasAllVipScopes(grantedScopes)) {
+      forceConsent = true;
+    }
+
+    const state = signState(userId);
+    const url = getAuthUrl(state, vip, forceConsent);
+
+    request.log.info({ userId, vip, forceConsent }, "Starting Google OAuth flow");
     return reply.code(302).redirect(url);
   });
 
@@ -53,9 +90,19 @@ export async function authRoutes(app: FastifyInstance) {
 
     try {
       const tokens = await exchangeCodeForTokens(query.code);
+      const status = await getGoogleConnectionStatus(userId);
 
       if (!tokens.refresh_token) {
-        request.log.warn({ userId }, "Google OAuth: no refresh_token returned (user previously consented)");
+        // This is expected when:
+        //  - the user had previously consented to offline access and we used
+        //    `prompt: "select_account"` (no re-consent → no new refresh_token),
+        //  - OR the user revoked access at myaccount.google.com/permissions
+        //    then re-authorized but Google treats it as a re-grant with no
+        //    refresh_token (rare). In this second case the previously stored
+        //    refresh_token is also invalid and the user will need to disconnect
+        //    fully and re-connect with `prompt: "consent"`.
+        request.log.warn({ userId, hadRefreshBefore: status.has_refresh_token },
+          "Google OAuth: no refresh_token returned — preserving any previously stored token");
       }
 
       await storeGoogleCredentials(userId, tokens);
