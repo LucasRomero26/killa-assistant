@@ -11,7 +11,7 @@ import { authRoutes } from "./routes/auth.js";
 import { apiConfigRoutes } from "./routes/api-config.js";
 import { whatsappAdminRoutes, whatsappWebSocketRoutes } from "./routes/whatsapp.js";
 import { initWhatsAppMessageHandler } from "./services/whatsapp-handler.js";
-import { startWhatsAppBot } from "./services/whatsapp.js";
+import { startWhatsAppBot, shutdownWhatsApp } from "./services/whatsapp.js";
 
 const app = Fastify({
   logger: {
@@ -85,5 +85,29 @@ process.on("unhandledRejection", (reason) => {
 process.on("uncaughtException", (err) => {
   app.log.error({ err }, "Uncaught exception (non-fatal)");
 });
+
+// Graceful shutdown: close the WhatsApp/Chromium session cleanly so the
+// persisted profile is not corrupted (a corrupt profile later refuses to
+// re-pair). Docker sends SIGTERM on `docker compose stop/restart`.
+let shuttingDown = false;
+async function gracefulShutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  app.log.info({ signal }, "Graceful shutdown initiated");
+  try {
+    await shutdownWhatsApp();
+  } catch (err) {
+    app.log.error({ err }, "Error during WhatsApp shutdown");
+  }
+  try {
+    await app.close();
+  } catch {
+    // ignore
+  }
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => void gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => void gracefulShutdown("SIGINT"));
 
 bootstrap();

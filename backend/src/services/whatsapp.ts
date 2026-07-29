@@ -44,6 +44,20 @@ function ensureSessionDir(): string {
   return SESSION_DIR;
 }
 
+// Completely remove the persisted Chromium/WhatsApp-Web profile. This is
+// required after a genuine logout (UNPAIRED): re-scanning a QR against a
+// leftover, half-dead profile makes WhatsApp reject the pairing with
+// "Couldn't link device". A clean profile guarantees a fresh, scannable QR.
+function wipeSessionProfile(): void {
+  try {
+    rmSync(SESSION_DIR, { recursive: true, force: true });
+    mkdirSync(SESSION_DIR, { recursive: true });
+    app_log.warn({ dir: SESSION_DIR }, "[WA] session profile wiped for a clean re-pair");
+  } catch (err) {
+    app_log.error({ err }, "[WA] failed to wipe session profile");
+  }
+}
+
 type QRListener = (payload: WhatsAppQRPayload) => void;
 type StatusListener = (payload: WhatsAppStatusPayload) => void;
 type MessageListener = (msg: WhatsAppIncomingMessage) => void;
@@ -103,6 +117,31 @@ let rawOpenWAClient: { isConnected?: () => boolean } | null = null;
 // API keys. Populated from client.getMe() after the session becomes ready.
 let hostChatId: string | null = null;
 
+// --- Session health watchdog state ---
+// WhatsApp can silently log the linked device out (CONFLICT, UNPAIRED, a
+// Terms-of-Service block, or the ~14-day linked-device expiry). When that
+// happens OpenWA keeps a zombie Chromium session alive, so we must actively
+// probe the REAL connection state (client.getConnectionState()) instead of
+// trusting a stale lastStatus. Without this, /status reported "ready" for days
+// while no messages were being delivered. See getWhatsAppConnectionStatus().
+let watchdogTimer: ReturnType<typeof setInterval> | null = null;
+let lastKnownRealState: string | null = null;
+let consecutiveUnhealthy = 0;
+let everConnected = false;
+let recovering = false;
+
+let shuttingDown = false;
+
+const WATCHDOG_INTERVAL_MS = 60_000;
+const MAX_UNHEALTHY_TICKS = 3;
+// States OpenWA may briefly report while (re)connecting — tolerated for a few
+// ticks before we consider the session genuinely lost.
+const TRANSIENT_STATES = new Set(["OPENING", "PAIRING", "TIMEOUT"]);
+// States that mean the device was de-authenticated (manual logout, 14-day
+// linked-device expiry, ToS/ban). Recovery MUST wipe the profile so the next
+// QR pairs cleanly.
+const LOGOUT_STATES = new Set(["UNPAIRED", "UNPAIRED_IDLE", "TOS_BLOCK", "SMB_TOS_BLOCK"]);
+
 const qrListeners = new Set<QRListener>();
 const statusListeners = new Set<StatusListener>();
 const messageListeners = new Set<MessageListener>();
@@ -120,6 +159,9 @@ function emitQR(payload: WhatsAppQRPayload): void {
 
 function emitStatus(payload: WhatsAppStatusPayload): void {
   lastStatus = payload.status as WhatsAppConnectionStatus["status"];
+  if (payload.status === "ready" || payload.status === "authenticated") {
+    everConnected = true;
+  }
   statusListeners.forEach((cb) => {
     try {
       cb(payload);
@@ -180,25 +222,26 @@ export function getWhatsAppConnectionStatus(): WhatsAppConnectionStatus {
       status: lastStatus === "qr" ? "qr" : "disconnected",
     };
   }
-  let isConnected = activeClient.isConnected();
-  // Fallback: if the wrapper's isConnected() returns false but lastStatus was
-  // already set to "ready" or "authenticated", trust lastStatus. This handles
-  // the OpenWA 4.x bug where onReady fires and updates lastStatus via
-  // emitStatus but the wrapper closure's `connected` flag was not updated.
-  if (!isConnected && (lastStatus === "ready" || lastStatus === "authenticated")) {
-    isConnected = true;
+
+  // Source of truth: the watchdog's most recent REAL probe of the OpenWA
+  // client (client.getConnectionState()). We deliberately do NOT trust a stale
+  // lastStatus === "ready" here. WhatsApp can log the device out silently and
+  // leave a zombie Chromium session — the previous implementation reported
+  // "ready" for days in exactly that situation while no messages flowed.
+  if (lastKnownRealState !== null) {
+    const connected = lastKnownRealState === "CONNECTED";
+    return {
+      connected,
+      status: connected ? "ready" : lastStatus === "qr" ? "qr" : "disconnected",
+    };
   }
-  // Second fallback: probe the raw OpenWA client directly.
-  if (!isConnected && rawOpenWAClient && typeof rawOpenWAClient.isConnected === "function") {
-    try {
-      isConnected = rawOpenWAClient.isConnected();
-    } catch {
-      // ignore probe errors
-    }
-  }
+
+  // The watchdog has not completed its first probe yet — fall back to the
+  // wrapper's own connected flag (set by OpenWA lifecycle callbacks).
+  const wrapperConnected = activeClient.isConnected();
   return {
-    connected: isConnected,
-    status: isConnected ? "ready" : lastStatus === "qr" ? "qr" : "connecting",
+    connected: wrapperConnected,
+    status: wrapperConnected ? "ready" : lastStatus === "qr" ? "qr" : "connecting",
   };
 }
 
@@ -361,12 +404,15 @@ async function createOpenWAClient(events: WhatsAppClientEvents): Promise<WhatsAp
   wa.ev.on("statusChange", (data: unknown) => {
     const state = typeof data === "string" ? data : String(data);
     app_log.info({ state }, "[WA] ev statusChange fired");
-    if (state === "CONFLICT" || state === "LOGOUT" || state === "UNPAIRED") {
+    if (state === "CONFLICT" || state === "LOGOUT" || state === "UNPAIRED" || state === "UNPAIRED_IDLE") {
       connected = false;
-      activeClient = null;
-      rawOpenWAClient = null;
-      emitStatus({ status: "disconnected", message: `WhatsApp logged out (${state})` });
-      statusHandler({ status: "disconnected", message: `State: ${state}` });
+      // Self-heal only if the session had actually connected; otherwise it is
+      // just waiting for the operator to scan the initial QR.
+      if (everConnected) {
+        void recoverSession(state, state !== "CONFLICT");
+      } else {
+        emitStatus({ status: "disconnected", message: `State: ${state}` });
+      }
     } else if (state === "PAIRED") {
       connected = true;
       statusHandler({ status: "authenticated", message: "Device paired" });
@@ -420,15 +466,30 @@ async function createOpenWAClient(events: WhatsAppClientEvents): Promise<WhatsAp
     stopProxyOnQuit: true,
     screenshotOnInitializationBrowserError: true,
     logDebugInfoAsObject: true,
+    // Delete the stale session data file on logout so a subsequent restart
+    // performs a clean login instead of resurrecting a dead session.
+    deleteSessionDataOnLogout: true,
     ...(sessionPath ? { userDataDir: sessionPath, sessionDataPath: sessionPath } : {}),
     onStateChanged: (state: string) => {
       app_log.info({ state }, "[WA] onStateChanged fired");
-      if (state === "CONFLICT" || state === "UNPAIRED" || state === "LOGOUT") {
+      if (state === "CONFLICT" || state === "UNPAIRED" || state === "UNPAIRED_IDLE" || state === "LOGOUT") {
         connected = false;
-        activeClient = null;
-        rawOpenWAClient = null;
-        emitStatus({ status: "disconnected", message: `State: ${state}` });
-        events.onStatus?.({ status: "disconnected", message: `State: ${state}` });
+        // CONFLICT/UNLAUNCHED can often be recovered by refocusing the tab
+        // without a full restart (per OpenWA "Detecting Logouts" guidance).
+        if (state === "CONFLICT") {
+          const raw = rawOpenWAClient as unknown as { forceRefocus?: () => Promise<boolean> } | null;
+          try {
+            void raw?.forceRefocus?.();
+          } catch {
+            // best-effort
+          }
+        }
+        if (everConnected) {
+          void recoverSession(state, state !== "CONFLICT");
+        } else {
+          emitStatus({ status: "disconnected", message: `State: ${state}` });
+          events.onStatus?.({ status: "disconnected", message: `State: ${state}` });
+        }
       } else if (state === "PAIRED") {
         connected = true;
         emitStatus({ status: "authenticated", message: "Device paired" });
@@ -451,7 +512,11 @@ async function createOpenWAClient(events: WhatsAppClientEvents): Promise<WhatsAp
   // Probe the client directly and force the status to "ready" if it's connected.
   rawOpenWAClient = client as unknown as { isConnected?: () => boolean };
   try {
-    const isOpen = typeof client?.isConnected === "function" && client.isConnected();
+    // NOTE: OpenWA's client.isConnected() is ASYNC (returns Promise<boolean>).
+    // The previous code used it synchronously, so `isOpen` was always a truthy
+    // Promise and the session was force-marked "ready" even when it wasn't.
+    const isOpen =
+      typeof client?.isConnected === "function" && (await client.isConnected());
     if (isOpen) {
       app_log.info("[WA] wa.create() resolved — client.isConnected()=true, forcing ready");
       connected = true;
@@ -524,6 +589,140 @@ async function createOpenWAClient(events: WhatsAppClientEvents): Promise<WhatsAp
 }
 
 /**
+ * Probe the REAL OpenWA connection state. Returns the STATE string
+ * ("CONNECTED", "CONFLICT", "UNPAIRED", "TIMEOUT", ...) or null if the client
+ * is unavailable / the probe throws.
+ */
+async function probeConnectionState(): Promise<string | null> {
+  const raw = rawOpenWAClient as unknown as {
+    getConnectionState?: () => Promise<string>;
+  } | null;
+  if (!raw || typeof raw.getConnectionState !== "function") return null;
+  try {
+    return await raw.getConnectionState();
+  } catch (err) {
+    app_log.warn({ err }, "[WA] watchdog: getConnectionState() probe failed");
+    return null;
+  }
+}
+
+/**
+ * Tear down an unhealthy session and restart the bot. If the linked device is
+ * still authorized, OpenWA reconnects automatically from the persisted
+ * Chromium profile; otherwise it emits a fresh QR at the admin QR page so the
+ * operator can re-scan. When `wipeProfile` is true (genuine logout) the
+ * persisted profile is deleted first so the new QR pairs cleanly.
+ * Guarded by `recovering` / `shuttingDown` to avoid concurrent restarts.
+ */
+async function recoverSession(reason: string, wipeProfile = false): Promise<void> {
+  if (recovering || shuttingDown) return;
+  recovering = true;
+  app_log.error(
+    { reason, wipeProfile },
+    "[WA] recovering session — tearing down and restarting"
+  );
+  emitStatus({
+    status: "disconnected",
+    message: wipeProfile
+      ? `WhatsApp logged out (${reason}) — restarting; scan the QR again to reconnect`
+      : `WhatsApp session unhealthy (${reason}) — restarting; re-scan the QR if it does not reconnect`,
+  });
+
+  consecutiveUnhealthy = 0;
+  lastKnownRealState = null;
+  everConnected = false;
+  const dying = activeClient;
+  activeClient = null;
+  rawOpenWAClient = null;
+  hostChatId = null;
+
+  // Close the browser BEFORE wiping the profile — the profile cannot be
+  // safely removed while Chromium still holds it open.
+  if (dying) {
+    try {
+      await dying.disconnect();
+    } catch {
+      // best-effort teardown
+    }
+  }
+
+  if (wipeProfile) {
+    wipeSessionProfile();
+  }
+
+  recovering = false;
+
+  if (shuttingDown) return;
+  startWhatsAppBot().catch((err) =>
+    app_log.error({ err }, "[WA] restart after recovery failed")
+  );
+}
+
+async function watchdogTick(): Promise<void> {
+  if (recovering || startingPromise || !activeClient) return;
+
+  const state = await probeConnectionState();
+  if (state !== null) {
+    lastKnownRealState = state;
+  }
+
+  if (state === "CONNECTED") {
+    consecutiveUnhealthy = 0;
+    everConnected = true;
+    if (lastStatus !== "ready") {
+      emitStatus({ status: "ready", message: "WhatsApp session healthy (watchdog)" });
+    }
+    // Keep the WhatsApp Web tab focused to reduce idle-driven disconnects.
+    try {
+      const raw = rawOpenWAClient as unknown as { forceRefocus?: () => Promise<boolean> } | null;
+      if (raw && typeof raw.forceRefocus === "function") {
+        await raw.forceRefocus();
+      }
+    } catch {
+      // best-effort keepalive
+    }
+    return;
+  }
+
+  consecutiveUnhealthy += 1;
+  app_log.warn(
+    { state, consecutiveUnhealthy, everConnected },
+    "[WA] watchdog: session not CONNECTED"
+  );
+
+  const isLogout = state !== null && LOGOUT_STATES.has(state);
+  const isTransient = state !== null && TRANSIENT_STATES.has(state);
+  const terminal = state !== null && !isTransient && !isLogout;
+
+  // Only force a restart when a previously-working session dropped. A session
+  // that has never connected is simply waiting for the operator to scan the
+  // QR — restarting it in a loop would just churn Chromium and rotate the QR.
+  // A confirmed logout wipes the profile so the fresh QR pairs cleanly.
+  if (everConnected && (isLogout || terminal || consecutiveUnhealthy >= MAX_UNHEALTHY_TICKS)) {
+    await recoverSession(state ?? "unknown", isLogout);
+  }
+}
+
+function startWatchdog(): void {
+  if (watchdogTimer) return;
+  consecutiveUnhealthy = 0;
+  watchdogTimer = setInterval(() => {
+    void watchdogTick();
+  }, WATCHDOG_INTERVAL_MS);
+  if (typeof watchdogTimer.unref === "function") watchdogTimer.unref();
+  app_log.info({ intervalMs: WATCHDOG_INTERVAL_MS }, "[WA] session health watchdog started");
+}
+
+function stopWatchdog(): void {
+  if (watchdogTimer) {
+    clearInterval(watchdogTimer);
+    watchdogTimer = null;
+  }
+  lastKnownRealState = null;
+  consecutiveUnhealthy = 0;
+}
+
+/**
  * Start the singleton WhatsApp bot (no userId — it is a shared account).
  * Safe to call multiple times: if already starting, returns the same promise.
  */
@@ -550,6 +749,7 @@ export async function startWhatsAppBot(): Promise<void> {
   startingPromise = factory(events)
     .then((client) => {
       activeClient = client;
+      startWatchdog();
     })
     .catch((error) => {
       activeClient = null;
@@ -564,6 +764,8 @@ export async function startWhatsAppBot(): Promise<void> {
 }
 
 export async function stopWhatsApp(): Promise<void> {
+  stopWatchdog();
+  everConnected = false;
   if (startingPromise) {
     try {
       await startingPromise;
@@ -578,6 +780,22 @@ export async function stopWhatsApp(): Promise<void> {
   }
   hostChatId = null;
   emitStatus({ status: "disconnected", message: "Session stopped by server" });
+}
+
+/**
+ * Gracefully shut down the WhatsApp session on process termination
+ * (SIGTERM / SIGINT). Closing Chromium cleanly persists the session profile
+ * correctly; a hard kill can leave a corrupt profile that later refuses to
+ * re-pair ("Couldn't link device"). Best-effort with a hard timeout so it
+ * never blocks container shutdown.
+ */
+export async function shutdownWhatsApp(timeoutMs = 8_000): Promise<void> {
+  shuttingDown = true;
+  stopWatchdog();
+  await Promise.race([
+    stopWhatsApp(),
+    new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
 }
 
 export async function sendWhatsAppMessage(chatId: string, text: string): Promise<void> {
