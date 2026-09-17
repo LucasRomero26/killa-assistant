@@ -98,10 +98,10 @@ export interface TelegramFileResponse {
   file_path?: string;
 }
 
-export type LogSource = "whatsapp" | "telegram" | "calendar" | "drive" | "nvidia_nim" | "groq" | "system";
+export type LogSource = "telegram" | "calendar" | "drive" | "nvidia_nim" | "groq" | "system";
 export type LogLevel = "info" | "warning" | "error" | "success";
 
-export type MessagingChannel = "telegram" | "whatsapp";
+export type MessagingChannel = "telegram";
 
 export interface IncomingMessage {
   channel: MessagingChannel;
@@ -121,39 +121,6 @@ export interface MessagingProvider {
   start(): Promise<void>;
   stop(): Promise<void>;
   isReady(): boolean;
-}
-
-export interface WhatsAppMessage {
-  from: string;
-  chatId: string;
-  body: string;
-  isVoice: boolean;
-  mimeType: string;
-  mediaBuffer?: Buffer;
-}
-
-export interface WhatsAppQRPayload {
-  qr: string;
-  timestamp: number;
-}
-
-export interface WhatsAppStatusPayload {
-  status: "qr" | "authenticated" | "disconnected" | "connecting" | "ready";
-  message?: string;
-}
-
-export type WhatsAppMessageType = "text" | "voice" | "photo" | "document";
-
-export interface WhatsAppIncomingMessage {
-  chatId: string;
-  userId?: string;
-  type: WhatsAppMessageType;
-  text: string;
-  caption?: string;
-  mimeType?: string;
-  fileName?: string;
-  duration?: number;
-  rawMessage?: Record<string, unknown>;
 }
 
 export interface PendingMedia {
@@ -184,5 +151,4 @@ export interface IncomingMediaMessage {
   mimeType?: string;
   fileSize?: number;
   caption?: string;
-  mediaBuffer?: { buffer: Buffer; mimeType: string };
 }

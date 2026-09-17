@@ -1,6 +1,6 @@
 # KillaAssistant
 
-A multi-user AI assistant that operates through Telegram and WhatsApp. Users delegate tasks — calendar management, file organization, voice processing — by chatting with a bot. Each user brings their own LLM API keys and links their own Google account. The assistant handles the rest.
+A multi-user AI assistant that operates through Telegram. Users delegate tasks — calendar management, file organization, voice processing — by chatting with a bot. Each user brings their own LLM API keys and links their own Google account. The assistant handles the rest.
 
 **Live demo:** https://killa-assistant.vercel.app
 
@@ -11,7 +11,7 @@ Users interact with the bot via text, voice notes, photos, or documents. The bac
 Voice messages are transcribed with Groq Whisper. Photos and documents are held as "pending media" until the user's next message specifies what to do with them (e.g., "save this to Drive in the Documents folder").
 
 ```
-Telegram / WhatsApp ──► Backend (Fastify)
+Telegram ──────────► Backend (Fastify)
                           ├──► NVIDIA NIM (Llama 3.1) — LLM + tool calling
                           ├──► Groq (Whisper) — voice transcription
                           ├──► Google Calendar + Drive (OAuth 2.0)
@@ -37,13 +37,13 @@ Navigate to **APIs** and enter your NVIDIA NIM and Groq API keys. These are encr
 
 Go to **Connections** and click **Connect Google**. You'll be redirected to Google's OAuth consent screen — authorize Calendar and Drive access. Your OAuth tokens are encrypted and auto-refreshed on expiry.
 
-### 4. Link Telegram or WhatsApp
+### 4. Link Telegram
 
-On the same **Connections** page, click **Link** on the Telegram or WhatsApp card. A one-time code (e.g., `KILLA-X7B2`) appears — send it to the bot as `/start KILLA-X7B2`. This links your chat to your account. The code expires in 10 minutes.
+On the same **Connections** page, click **Link** on the Telegram card. A one-time code (e.g., `KILLA-X7B2`) appears — send it to the bot as `/start KILLA-X7B2`. This links your chat to your account. The code expires in 10 minutes.
 
 ### 5. Chat
 
-Send a message to the bot via Telegram or WhatsApp:
+Send a message to the bot on Telegram:
 
 - **Text:** "What's on my calendar tomorrow?" — the bot lists events via Google Calendar tool calling
 - **Voice:** Send a voice note — Groq transcribes it, the bot processes it as text
@@ -53,12 +53,12 @@ Send a message to the bot via Telegram or WhatsApp:
 
 | Component | Technology |
 | :-- | :-- |
-| Backend | Node.js 20+, TypeScript, Fastify 5, Docker |
+| Backend | Node.js 20+, TypeScript, Fastify 5, Docker (node:20-slim, no browser deps) |
 | Frontend | Next.js 14, Tailwind CSS, SWR |
 | Database | PostgreSQL, Supabase (RLS, Auth) |
 | LLM | NVIDIA NIM (Llama 3.1 70B Instruct) — per-user API key |
 | Transcription | Groq (Whisper Large v3) — per-user API key |
-| Messaging | Telegram Bot API, OpenWA 4.x (WhatsApp) |
+| Messaging | Telegram Bot API (webhook) |
 | Integrations | Google Calendar API, Google Drive API (OAuth 2.0) |
 
 ## Security
@@ -70,7 +70,6 @@ Send a message to the bot via Telegram or WhatsApp:
 - **Rate limiting** — global 100 req/min with per-endpoint overrides
 - **Webhook verification** — Telegram webhook requires a shared secret token
 - **Atomic link tokens** — race-condition-safe `UPDATE ... WHERE status = 'pending'` consumption
-- **WhatsApp access control** — only linked chat IDs are processed; others get an "unauthorized" reply
 
 ## CI/CD
 

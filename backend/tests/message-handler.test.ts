@@ -61,10 +61,6 @@ vi.mock("../src/services/telegram-link.js", () => ({
   getUserIdByChatId: vi.fn(),
 }));
 
-vi.mock("../src/services/whatsapp-link.js", () => ({
-  getUserIdByWhatsAppChatId: vi.fn(),
-}));
-
 vi.mock("../src/services/pending-media.js", () => ({
   createPendingMedia: vi.fn().mockResolvedValue({
     id: "media-id-mock",
@@ -97,7 +93,6 @@ import { GroqError } from "../src/services/groq.js";
 import { getUserApiKeys } from "../src/services/user-api-keys.js";
 import { getUserSystemPrompt } from "../src/services/user-config.js";
 import { getUserIdByChatId } from "../src/services/telegram-link.js";
-import { getUserIdByWhatsAppChatId } from "../src/services/whatsapp-link.js";
 import { getPendingMedia } from "../src/services/pending-media.js";
 
 describe("Unified Message Handler", () => {
@@ -111,7 +106,6 @@ describe("Unified Message Handler", () => {
     });
     vi.mocked(getUserSystemPrompt).mockResolvedValue(null);
     vi.mocked(getUserIdByChatId).mockResolvedValue(null);
-    vi.mocked(getUserIdByWhatsAppChatId).mockResolvedValue(null);
   });
 
   describe("handleTextMessage - Telegram channel", () => {
@@ -151,71 +145,6 @@ describe("Unified Message Handler", () => {
     });
   });
 
-  describe("handleTextMessage - WhatsApp channel", () => {
-    it("should process a text message through the same orchestrator", async () => {
-      vi.mocked(getUserIdByWhatsAppChatId).mockResolvedValueOnce("user-2");
-      vi.mocked(processMessageWithTools).mockResolvedValueOnce("Your files are listed.");
-
-      const result = await handleTextMessage({
-        channel: "whatsapp",
-        chatId: "5551234@c.us",
-        userId: "user-2",
-        text: "List my Drive files",
-      });
-
-      expect(result).toBe("Your files are listed.");
-      expect(getUserIdByWhatsAppChatId).toHaveBeenCalledWith("5551234@c.us");
-      expect(processMessageWithTools).toHaveBeenCalledWith(
-        expect.stringContaining("SECURITY RULES"),
-        "List my Drive files",
-        "user-2",
-        expect.objectContaining({ nvidiaApiKey: expect.any(String) })
-      );
-    });
-
-    it("should return link message when WhatsApp chat_id is not linked", async () => {
-      vi.mocked(getUserIdByWhatsAppChatId).mockResolvedValueOnce(null);
-
-      const result = await handleTextMessage({
-        channel: "whatsapp",
-        chatId: "999@c.us",
-        userId: "user-999",
-        text: "hello",
-      });
-
-      expect(result).toContain("vinculado");
-      expect(processMessageWithTools).not.toHaveBeenCalled();
-    });
-
-    it("should use the same system prompt for both channels", async () => {
-      vi.mocked(getUserIdByChatId).mockResolvedValueOnce("supabase-uuid-a");
-      vi.mocked(getUserIdByWhatsAppChatId).mockResolvedValueOnce("supabase-uuid-b");
-      vi.mocked(processMessageWithTools).mockResolvedValue("ok");
-
-      await handleTextMessage({
-        channel: "telegram",
-        chatId: "1",
-        userId: "user-b",
-        text: "hello",
-      });
-
-      await handleTextMessage({
-        channel: "whatsapp",
-        chatId: "2@c.us",
-        userId: "user-b",
-        text: "hello",
-      });
-
-      const firstCall = vi.mocked(processMessageWithTools).mock.calls[0];
-      const secondCall = vi.mocked(processMessageWithTools).mock.calls[1];
-
-      expect(typeof firstCall?.[0]).toBe("string");
-      expect(typeof secondCall?.[0]).toBe("string");
-      expect(firstCall?.[0].startsWith("SECURITY RULES")).toBe(true);
-      expect(secondCall?.[0].startsWith("SECURITY RULES")).toBe(true);
-    });
-  });
-
   describe("handleTextMessage - prompt injection filtering", () => {
     it("should sanitize prompt injection attempts before processing", async () => {
       vi.mocked(getUserIdByChatId).mockResolvedValueOnce("supabase-uuid-inj");
@@ -236,13 +165,13 @@ describe("Unified Message Handler", () => {
 
   describe("handleVoiceMessage", () => {
     it("should transcribe audio and process through orchestrator", async () => {
-      vi.mocked(getUserIdByWhatsAppChatId).mockResolvedValueOnce("user-voice");
+      vi.mocked(getUserIdByChatId).mockResolvedValueOnce("user-voice");
       vi.mocked(transcribeAudio).mockResolvedValueOnce("Create a meeting tomorrow at 3pm");
       vi.mocked(processMessageWithTools).mockResolvedValueOnce("Meeting created.");
 
       const result = await handleVoiceMessage({
-        channel: "whatsapp",
-        chatId: "555@c.us",
+        channel: "telegram",
+        chatId: "555",
         userId: "user-voice",
         audioBuffer: Buffer.from("audio-data"),
         mimeType: "audio/ogg",
@@ -275,12 +204,12 @@ describe("Unified Message Handler", () => {
     });
 
     it("should return message when transcription is whitespace only", async () => {
-      vi.mocked(getUserIdByWhatsAppChatId).mockResolvedValueOnce("user-ws");
+      vi.mocked(getUserIdByChatId).mockResolvedValueOnce("user-ws");
       vi.mocked(transcribeAudio).mockResolvedValueOnce("   \n  ");
 
       const result = await handleVoiceMessage({
-        channel: "whatsapp",
-        chatId: "1@c.us",
+        channel: "telegram",
+        chatId: "1",
         userId: "user-ws",
         audioBuffer: Buffer.from(""),
         mimeType: "audio/ogg",

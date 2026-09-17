@@ -86,7 +86,7 @@ export function BehaviorForm({ userId }: { userId: string }) {
 
   if (isLoading) {
     return (
-      <div className="rounded-xl p-6 border border-border">
+      <div className="surface rounded-xl p-6">
         <div className="skeleton h-6 w-48 rounded mb-4"></div>
         <div className="skeleton h-80 w-full rounded"></div>
       </div>
@@ -109,7 +109,7 @@ export function BehaviorForm({ userId }: { userId: string }) {
             onChange={(e) =>
               setLocalConfig({ ...localConfig, system_prompt: e.target.value })
             }
-            className="w-full h-64 bg-bg-input border border-border rounded-lg p-4 text-sm text-text-primary font-mono focus:border-accent focus:ring-0 transition-colors resize-none placeholder:text-text-tertiary"
+            className="input h-64 !p-4 font-mono resize-none"
             placeholder="You are an administrative assistant..."
           />
           <div className="absolute bottom-3 right-4 text-xs text-text-tertiary font-mono tabular-nums">
@@ -134,7 +134,11 @@ export function BehaviorForm({ userId }: { userId: string }) {
             ).map(([value, label]) => (
               <label
                 key={value}
-                className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-border hover:border-border-hover cursor-pointer transition-colors"
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
+                  localConfig.response_mode === value
+                    ? "border-accent/40 bg-accent/5"
+                    : "border-border hover:border-border-hover"
+                }`}
               >
                 <span className="text-sm text-text-secondary">{label}</span>
                 <input
@@ -195,11 +199,7 @@ export function BehaviorForm({ userId }: { userId: string }) {
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="bg-accent text-accent-foreground px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
+      <button type="submit" disabled={saving} className="btn btn-primary px-6">
         {saving ? "Saving..." : "Save configuration"}
       </button>
     </form>

@@ -7,25 +7,18 @@ import { redirect } from "next/navigation";
 
 export default async function BehaviorPage() {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
 
-  if (!user) {
+  if (!session?.user) {
     redirect("/login");
   }
 
   return (
-    <AppShell title="Behavior">
-      <div className="mb-2">
-        <h3 className="font-sans font-xl text-text-primary mb-1">
-          Behavior
-        </h3>
-        <p className="text-sm text-text-secondary">
-          Configure the personality and behavior of your assistant.
-        </p>
-      </div>
-      <BehaviorForm userId={user.id} />
+    <AppShell
+      title="Behavior"
+      description="Shape how the assistant talks and what it does with your notes."
+    >
+      <BehaviorForm userId={session.user.id} />
     </AppShell>
   );
 }

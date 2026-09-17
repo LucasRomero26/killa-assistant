@@ -1,35 +1,33 @@
 import Link from "next/link";
-import { Check, AlertCircle, Clock, Unlink } from "lucide-react";
-import { ServiceLogo } from "./ServiceLogo";
+import { Unlink } from "lucide-react";
+import { ServiceLogo, SERVICE_COLOR } from "./ServiceLogo";
 
 interface ConnectionCardProps {
   title: string;
   subtitle: string;
-  logo: "whatsapp" | "telegram" | "calendar" | "drive";
+  logo: "telegram" | "calendar" | "drive";
   status: "on" | "off" | "pending";
   action: { label: string; href?: string };
   onActionClick?: () => void;
   onDisconnect?: () => void;
+  disconnecting?: boolean;
 }
 
 const STATUS_CONFIG = {
   on: {
-    badgeBg: "bg-success/10",
-    badgeText: "text-success",
+    className: "text-success bg-success/10 border-success/20",
     label: "Connected",
-    Indicator: Check,
+    pulse: false,
   },
   off: {
-    badgeBg: "bg-error/10",
-    badgeText: "text-error",
+    className: "text-text-tertiary bg-bg-elevated/60 border-border",
     label: "Disconnected",
-    Indicator: AlertCircle,
+    pulse: false,
   },
   pending: {
-    badgeBg: "bg-warning/10",
-    badgeText: "text-warning",
+    className: "text-warning bg-warning/10 border-warning/20",
     label: "Pending",
-    Indicator: Clock,
+    pulse: true,
   },
 } as const;
 
@@ -41,50 +39,64 @@ export function ConnectionCard({
   action,
   onActionClick,
   onDisconnect,
+  disconnecting = false,
 }: ConnectionCardProps) {
   const cfg = STATUS_CONFIG[status];
-  const Indicator = cfg.Indicator;
   const isConnected = status === "on";
-
-  const primaryButtonClass = "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:bg-accent-hover transition-all duration-200 shadow-sm";
-
-  const secondaryButtonClass = "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-transparent border border-border text-text-secondary text-sm font-medium hover:bg-bg-elevated hover:text-text-primary hover:border-error/30 transition-all duration-200";
+  const brand = SERVICE_COLOR[logo];
 
   const primaryButton = action.href ? (
-    <Link href={action.href} className={primaryButtonClass}>
+    <Link href={action.href} className="btn btn-primary w-full">
       {action.label}
     </Link>
   ) : (
-    <button className={primaryButtonClass} onClick={onActionClick} disabled={!onActionClick}>
+    <button className="btn btn-primary w-full" onClick={onActionClick} disabled={!onActionClick}>
       {action.label}
     </button>
   );
 
   return (
-    <div className="surface rounded-xl p-5 flex flex-col gap-4 group transition-all duration-200 hover:border-border-hover">
-      <div className="flex items-start justify-between">
-        <div className="w-11 h-11 rounded-lg flex items-center justify-center bg-bg-elevated">
-          <ServiceLogo name={logo} size={24} />
+    <div
+      className="surface relative rounded-xl p-5 flex flex-col gap-5 overflow-hidden"
+      data-status={status}
+    >
+      {/* Brand tint in the top-left corner */}
+      <div
+        className="pointer-events-none absolute -top-16 -left-16 h-40 w-40 rounded-full opacity-[0.14] blur-3xl"
+        style={{ backgroundColor: brand }}
+        aria-hidden="true"
+      />
+
+      <div className="relative flex items-start justify-between">
+        <div
+          className="w-11 h-11 rounded-lg flex items-center justify-center border"
+          style={{
+            backgroundColor: `color-mix(in oklab, ${brand} 12%, transparent)`,
+            borderColor: `color-mix(in oklab, ${brand} 25%, transparent)`,
+          }}
+        >
+          <ServiceLogo name={logo} size={22} />
         </div>
-        <span className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded ${cfg.badgeBg} ${cfg.badgeText}`}>
-          <Indicator size={12} />
+        <span className={`pill border ${cfg.className}`}>
+          <span className={`pill-dot ${cfg.pulse ? "animate-pulse" : ""}`} />
           {cfg.label}
         </span>
       </div>
 
-      <div>
-        <h4 className="text-text-primary font-medium">{title}</h4>
+      <div className="relative">
+        <h4 className="text-text-primary font-semibold tracking-tight">{title}</h4>
         <p className="text-sm text-text-secondary mt-0.5">{subtitle}</p>
       </div>
 
-      <div className="border-t border-border pt-4 mt-auto space-y-2">
+      <div className="relative mt-auto">
         {isConnected && onDisconnect ? (
           <button
-            className={secondaryButtonClass}
+            className="btn btn-danger-ghost w-full"
             onClick={onDisconnect}
+            disabled={disconnecting}
           >
             <Unlink size={14} />
-            Disconnect
+            {disconnecting ? "Disconnecting..." : "Disconnect"}
           </button>
         ) : (
           primaryButton

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { LayoutGrid, Brain, Key, X, Menu, LogOut } from "lucide-react";
+import { LayoutGrid, Brain, Key, X, Menu, LogOut, ExternalLink } from "lucide-react";
 import { Logo } from "./Logo";
 
 const NAV_ITEMS = [
@@ -28,7 +28,7 @@ export function Sidebar() {
     try {
       const supabase = createSupabaseBrowserClient();
       await supabase.auth.signOut();
-      router.push("/login");
+      router.replace("/login");
       router.refresh();
     } catch {
       setLoggingOut(false);
@@ -45,16 +45,18 @@ export function Sidebar() {
       )}
 
       <nav
-        className={`fixed left-0 top-0 h-screen w-sidebar bg-bg-surface border-r border-border flex flex-col z-50
+        className={`fixed left-0 top-0 h-dvh w-sidebar glass border-r border-border flex flex-col z-50
         transition-transform duration-300 ease-out
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
         aria-label="Main navigation"
       >
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Logo size={40} />
-            <span className="font-sans font-2xl text-text-primary">KillaAssistant</span>
-          </div>
+        <div className="flex items-center justify-between px-5 h-16">
+          <Link href="/connections" className="flex items-center gap-2.5">
+            <Logo size={32} />
+            <span className="font-sans text-[15px] font-semibold tracking-tight text-text-primary">
+              KillaAssistant
+            </span>
+          </Link>
           <button
             onClick={() => setMobileOpen(false)}
             aria-label="Close menu"
@@ -64,43 +66,64 @@ export function Sidebar() {
           </button>
         </div>
 
-        <div className="flex flex-col gap-1 p-3 mt-2">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200
-                ${isActive
-                  ? "bg-accent/10 text-text-primary font-medium border border-accent/20"
-                  : "text-text-secondary hover:bg-bg-elevated hover:text-text-primary border border-transparent"
-                }`}
-              >
-                <Icon size={18} className={isActive ? "text-accent" : ""} />
-                {item.label}
-              </Link>
-            );
-          })}
+        <div className="px-3 pt-2">
+          <p className="px-3 pb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-text-tertiary">
+            Workspace
+          </p>
+          <div className="flex flex-col gap-0.5">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150
+                  ${isActive
+                    ? "bg-accent/10 text-text-primary font-medium"
+                    : "text-text-secondary hover:bg-bg-elevated/70 hover:text-text-primary"
+                  }`}
+                >
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-accent" />
+                  )}
+                  <Icon
+                    size={18}
+                    className={isActive ? "text-accent" : "text-text-tertiary group-hover:text-text-secondary transition-colors"}
+                  />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="mt-auto p-3 border-t border-border md:hidden">
+        <div className="mt-auto p-3 space-y-1 border-t border-border">
+          <a
+            href="https://t.me"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-elevated/70 hover:text-text-primary transition-colors"
+          >
+            <ExternalLink size={16} className="text-text-tertiary" />
+            Open Telegram
+          </a>
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors disabled:opacity-50"
+            className="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-elevated/70 hover:text-text-primary transition-colors disabled:opacity-50 md:hidden"
           >
-            <LogOut size={18} />
-            {loggingOut ? "..." : "Logout"}
+            <LogOut size={16} className="text-text-tertiary" />
+            {loggingOut ? "Signing out..." : "Logout"}
           </button>
         </div>
       </nav>
 
-      <div className="md:hidden fixed top-0 left-0 w-full h-14 bg-bg-surface/80 backdrop-blur-md border-b border-border flex items-center justify-between px-4 z-40">
+      <div className="md:hidden fixed top-0 left-0 w-full h-14 glass border-b border-border flex items-center justify-between px-4 z-40">
         <div className="flex items-center gap-2.5">
-          <Logo size={32} />
-          <span className="font-sans font-xl text-text-primary">KillaAssistant</span>
+          <Logo size={28} />
+          <span className="font-sans text-[15px] font-semibold tracking-tight text-text-primary">KillaAssistant</span>
         </div>
         <button
           onClick={() => setMobileOpen(true)}

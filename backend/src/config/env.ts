@@ -32,14 +32,10 @@ const envSchema = z.object({
 
   ENCRYPTION_KEY: z.string().length(64),
 
-  WHATSAPP_USE_MOCK: z
-    .enum(["true", "false"])
-    .default("true"),
-
-  WHATSAPP_AUTOSTART: z
-    .enum(["true", "false"])
-    .default("false"),
-
+  // Operator-only token for privileged endpoints (Telegram webhook setup).
+  // WHATSAPP_ADMIN_TOKEN is still read as a fallback so existing
+  // deployments keep working after the WhatsApp channel was removed.
+  ADMIN_TOKEN: z.string().optional(),
   WHATSAPP_ADMIN_TOKEN: z.string().optional(),
 });
 

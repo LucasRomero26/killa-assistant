@@ -50,7 +50,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Page routes only. /api/* route handlers (proxy, google-redirect) read the
+  // session themselves, so running the middleware there would parse the
+  // cookie twice on every client fetch.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

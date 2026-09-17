@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { MailCheck } from "lucide-react";
-import { Logo } from "@/components/Logo";
+import { AuthLayout } from "@/components/AuthLayout";
 
 export default function SignupPage() {
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -29,10 +27,7 @@ export default function SignupPage() {
 
     try {
       const supabase = createSupabaseBrowserClient();
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
 
       if (signUpError) {
         setError(signUpError.message);
@@ -49,8 +44,7 @@ export default function SignupPage() {
         return;
       }
 
-      router.push("/connections");
-      router.refresh();
+      window.location.assign("/connections");
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
@@ -59,135 +53,104 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex items-center justify-center gap-3">
-          <Logo size={60} />
-          <div>
-            <h1 className="font-sans font-3xl text-text-primary">KillaAssistant</h1>
-            <p className="text-sm text-text-secondary mt-0.5">Control Panel</p>
+    <AuthLayout>
+      {needsConfirmation ? (
+        <div className="text-center py-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-success/10 border border-success/20 text-success mb-5">
+            <MailCheck size={26} />
           </div>
+          <h2 className="font-sans text-2xl text-text-primary mb-2">Check your email</h2>
+          <p className="text-sm text-text-secondary mb-6 leading-relaxed">
+            We sent a confirmation link to{" "}
+            <span className="text-text-primary font-medium">{email}</span>. Click it to activate
+            your account.
+          </p>
+          <div className="surface rounded-lg p-4 mb-6 text-left">
+            <p className="text-xs text-text-tertiary leading-relaxed">
+              If it does not arrive in a few minutes, check your spam or junk folder.
+            </p>
+          </div>
+          <Link href="/login" className="btn btn-primary w-full">
+            Go to sign in
+          </Link>
         </div>
+      ) : (
+        <>
+          <h2 className="font-sans text-2xl text-text-primary">Create your account</h2>
+          <p className="text-sm text-text-secondary mt-1 mb-8">
+            Set up your control panel in under a minute.
+          </p>
 
-        <div className="surface rounded-xl p-6 sm:p-8 shadow-lg shadow-black/20">
-          {needsConfirmation ? (
-            <div className="text-center py-4">
-              <MailCheck size={48} className="text-success mx-auto mb-4" />
-              <h2 className="font-sans font-xl text-text-primary mb-3">
-                Check your email
-              </h2>
-              <p className="text-sm text-text-secondary mb-6 leading-relaxed">
-                We have sent a confirmation link to{" "}
-                <span className="text-text-primary font-medium">{email}</span>.
-                Click the link in your email to activate your account.
-              </p>
-              <div className="bg-bg-input border border-border rounded-lg p-4 mb-6 text-left">
-                <p className="text-xs text-text-tertiary leading-relaxed">
-                  If you do not receive the email in a few minutes, check
-                  your spam or junk folder.
-                </p>
-              </div>
-              <a
-                href="/login"
-                className="block w-full bg-accent text-accent-foreground py-2.5 rounded-lg text-sm font-medium text-center hover:bg-accent-hover transition-colors"
-              >
-                Go to sign in
-              </a>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="block text-xs font-medium text-text-secondary mb-2">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input"
+                placeholder="you@example.com"
+              />
             </div>
-          ) : (
-            <>
-              <h2 className="font-sans font-xl text-text-primary mb-1">
-                Create account
-              </h2>
-              <p className="text-sm text-text-secondary mb-6">
-                Set up your control panel.
-              </p>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-xs font-medium text-text-secondary mb-2"
-                  >
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-bg-input border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary focus:border-accent focus:ring-0 transition-colors placeholder:text-text-tertiary"
-                    placeholder="you@example.com"
-                  />
-                </div>
+            <div>
+              <label htmlFor="password" className="block text-xs font-medium text-text-secondary mb-2">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input"
+                placeholder="At least 8 characters"
+              />
+            </div>
 
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-xs font-medium text-text-secondary mb-2"
-                  >
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-bg-input border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary focus:border-accent focus:ring-0 transition-colors placeholder:text-text-tertiary"
-                    placeholder="At least 8 characters"
-                  />
-                </div>
+            <div>
+              <label htmlFor="confirm-password" className="block text-xs font-medium text-text-secondary mb-2">
+                Confirm password
+              </label>
+              <input
+                id="confirm-password"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="input"
+                placeholder="Repeat your password"
+              />
+            </div>
 
-                <div>
-                  <label
-                    htmlFor="confirm-password"
-                    className="block text-xs font-medium text-text-secondary mb-2"
-                  >
-                    Confirm password
-                  </label>
-                  <input
-                    id="confirm-password"
-                    type="password"
-                    required
-                    minLength={8}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full bg-bg-input border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary focus:border-accent focus:ring-0 transition-colors placeholder:text-text-tertiary"
-                    placeholder="Repeat your password"
-                  />
-                </div>
+            {error && (
+              <div role="alert" className="text-sm text-error bg-error/10 border border-error/20 rounded-lg p-3">
+                {error}
+              </div>
+            )}
 
-                {error && (
-                  <div className="text-sm text-error bg-error/10 border border-error/20 rounded-lg p-3">
-                    {error}
-                  </div>
-                )}
+            <button type="submit" disabled={loading} className="btn btn-primary w-full">
+              {loading ? "Creating..." : "Create account"}
+            </button>
+          </form>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-accent text-accent-foreground py-2.5 rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? "Creating..." : "Create account"}
-                </button>
-              </form>
-
-              <p className="text-sm text-text-secondary mt-6 text-center">
-                Already have an account?{" "}
-                <a
-                  href="/login"
-                  className="text-accent hover:text-accent-hover transition-colors"
-                >
-                  Sign in
-                </a>
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+          <p className="text-sm text-text-secondary mt-8 text-center">
+            Already have an account?{" "}
+            <Link href="/login" className="text-accent hover:text-accent-hover transition-colors font-medium">
+              Sign in
+            </Link>
+          </p>
+        </>
+      )}
+    </AuthLayout>
   );
 }

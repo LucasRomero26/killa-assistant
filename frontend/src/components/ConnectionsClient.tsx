@@ -3,26 +3,16 @@
 import { useState, useCallback } from "react";
 import useSWR, { mutate } from "swr";
 import { ConnectionCard } from "./ConnectionCard";
-import { WhatsAppLinkModal } from "./WhatsAppLinkModal";
 import { TelegramLinkModal } from "./TelegramLinkModal";
 import { proxyFetcher } from "@/lib/swr-fetcher";
 import { proxyFetch } from "@/lib/api";
 
-interface WhatsAppBotStatus {
+interface GoogleStatus {
   connected: boolean;
-  status: "qr" | "authenticated" | "disconnected" | "connecting" | "ready";
-}
-
-interface WhatsAppLinkStatus {
-  linked: boolean;
-  chatId: string | null;
-}
-
-interface TelegramWebhookInfo {
-  url?: string;
-  has_custom_certificate?: boolean;
-  pending_update_count?: number;
-  ip_address?: string;
+  calendar_connected: boolean;
+  drive_connected: boolean;
+  has_refresh_token: boolean;
+  expiry_date: string | null;
 }
 
 interface TelegramLinkStatus {
@@ -31,179 +21,132 @@ interface TelegramLinkStatus {
 }
 
 interface ConnectionsClientProps {
-  googleConnected: boolean;
-  googleCalendarConnected: boolean;
-  googleDriveConnected: boolean;
   googleOAuthUrl: string;
 }
 
-export function ConnectionsClient({
-  googleConnected,
-  googleCalendarConnected,
-  googleDriveConnected,
-  googleOAuthUrl,
-}: ConnectionsClientProps) {
-  const [showWhatsAppLink, setShowWhatsAppLink] = useState(false);
+const GOOGLE_STATUS_KEY = "/api/auth/google/status";
+const TELEGRAM_STATUS_KEY = "/api/telegram/link-status";
+
+function CardSkeleton() {
+  return (
+    <div className="surface rounded-xl p-5 space-y-5" aria-hidden="true">
+      <div className="flex items-center justify-between">
+        <div className="skeleton h-11 w-11 rounded-lg" />
+        <div className="skeleton h-6 w-24 rounded-full" />
+      </div>
+      <div className="space-y-2">
+        <div className="skeleton h-4 w-24 rounded" />
+        <div className="skeleton h-3 w-32 rounded" />
+      </div>
+      <div className="skeleton h-10 w-full rounded-lg" />
+    </div>
+  );
+}
+
+/**
+ * Both statuses are fetched client-side so the page shell paints
+ * immediately; the previous version blocked the whole server render on a
+ * round-trip to the backend before showing anything.
+ */
+export function ConnectionsClient({ googleOAuthUrl }: ConnectionsClientProps) {
   const [showTelegramLink, setShowTelegramLink] = useState(false);
-  const [disconnecting, setDisconnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState<"google" | "telegram" | null>(null);
 
-  const closeWhatsAppLink = useCallback(() => setShowWhatsAppLink(false), []);
-  const closeTelegramLink = useCallback(() => setShowTelegramLink(false), []);
+  const closeTelegramLink = useCallback(() => {
+    setShowTelegramLink(false);
+    mutate(TELEGRAM_STATUS_KEY);
+  }, []);
 
-  const { data: whatsappBotStatus } = useSWR<WhatsAppBotStatus>(
-    "/api/whatsapp/status",
-    proxyFetcher,
-    { refreshInterval: showWhatsAppLink || showTelegramLink ? 0 : 5000 }
+  const { data: googleStatus, isLoading: googleLoading } = useSWR<GoogleStatus>(
+    GOOGLE_STATUS_KEY,
+    proxyFetcher
   );
 
-  const { data: whatsappLinkData } = useSWR<WhatsAppLinkStatus>(
-    "/api/whatsapp/link-status",
-    proxyFetcher,
-    { refreshInterval: showWhatsAppLink || showTelegramLink ? 0 : 0 }
+  const { data: telegramLinkData, isLoading: telegramLoading } = useSWR<TelegramLinkStatus>(
+    TELEGRAM_STATUS_KEY,
+    proxyFetcher
   );
 
-  const { data: telegramInfo } = useSWR<TelegramWebhookInfo>(
-    "/api/telegram/webhook-info",
-    proxyFetcher,
-    { refreshInterval: showWhatsAppLink || showTelegramLink ? 0 : 0 }
-  );
-
-  const { data: telegramLinkData } = useSWR<TelegramLinkStatus>(
-    "/api/telegram/link-status",
-    proxyFetcher,
-    { refreshInterval: showWhatsAppLink || showTelegramLink ? 0 : 0 }
-  );
-
+  const googleConnected = googleStatus?.connected ?? false;
+  const googleCalendarConnected = googleStatus?.calendar_connected ?? false;
+  const googleDriveConnected = googleStatus?.drive_connected ?? false;
   const telegramLinked = telegramLinkData?.linked ?? false;
 
-  const whatsappBotReady = whatsappBotStatus?.connected ?? false;
-  const whatsappLinked = whatsappLinkData?.linked ?? false;
-
-  const whatsappCardStatus: "on" | "off" | "pending" = whatsappLinked
-    ? "on"
-    : whatsappBotStatus?.status === "connecting" || whatsappBotStatus?.status === "qr"
-      ? "pending"
-      : "off";
-
-  const whatsappSubtitle = whatsappLinked
-    ? "Linked"
-    : whatsappBotReady
-      ? "Bot online — link your account"
-      : whatsappBotStatus?.status === "connecting"
-        ? "Bot starting..."
-        : whatsappBotStatus?.status === "qr"
-          ? "Bot waiting for QR scan (admin)"
-          : "Bot offline";
-
-  const telegramCardStatus: "on" | "off" | "pending" = telegramLinked
-    ? "on"
-    : "pending";
-  const telegramSubtitle = telegramLinked
-    ? "Linked"
-    : telegramInfo?.url
-      ? `Bot active (${telegramInfo?.pending_update_count ?? 0} pending)`
-      : "Not linked";
-
   async function handleGoogleDisconnect() {
-    setDisconnecting(true);
+    setDisconnecting("google");
     try {
-      const res = await proxyFetch("/api/auth/google/disconnect", {
-        method: "DELETE",
-      });
+      const res = await proxyFetch("/api/auth/google/disconnect", { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to disconnect");
-      mutate("/api/auth/google/status");
-      window.location.reload();
+      await mutate(GOOGLE_STATUS_KEY);
     } catch {
       // ignore
     } finally {
-      setDisconnecting(false);
+      setDisconnecting(null);
     }
   }
 
   async function handleTelegramDisconnect() {
-    setDisconnecting(true);
+    setDisconnecting("telegram");
     try {
-      const res = await proxyFetch("/api/telegram/unlink", {
-        method: "DELETE",
-      });
+      const res = await proxyFetch("/api/telegram/unlink", { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to unlink");
-      mutate("/api/telegram/link-status");
-      window.location.reload();
+      await mutate(TELEGRAM_STATUS_KEY);
     } catch {
       // ignore
     } finally {
-      setDisconnecting(false);
-    }
-  }
-
-  async function handleWhatsAppDisconnect() {
-    setDisconnecting(true);
-    try {
-      const res = await proxyFetch("/api/whatsapp/unlink", {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to unlink");
-      mutate("/api/whatsapp/link-status");
-    } catch {
-      // ignore
-    } finally {
-      setDisconnecting(false);
+      setDisconnecting(null);
     }
   }
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        <ConnectionCard
-          title="Calendar"
-          subtitle={googleCalendarConnected ? "Connected" : "Not linked"}
-          logo="calendar"
-          status={googleCalendarConnected ? "on" : "off"}
-          action={{ label: "Connect Google", href: googleConnected ? undefined : googleOAuthUrl }}
-          onActionClick={googleConnected ? undefined : undefined}
-          onDisconnect={googleConnected ? handleGoogleDisconnect : undefined}
-        />
-        <ConnectionCard
-          title="Drive"
-          subtitle={googleDriveConnected ? "Connected" : "Not linked"}
-          logo="drive"
-          status={googleDriveConnected ? "on" : "off"}
-          action={{ label: "Connect Google", href: googleConnected ? undefined : googleOAuthUrl }}
-          onActionClick={googleConnected ? undefined : undefined}
-          onDisconnect={googleConnected ? handleGoogleDisconnect : undefined}
-        />
-        <ConnectionCard
-          title="WhatsApp"
-          subtitle={whatsappSubtitle}
-          logo="whatsapp"
-          status={whatsappCardStatus}
-          action={{ label: "Link" }}
-          onActionClick={whatsappLinked ? undefined : () => setShowWhatsAppLink(true)}
-          onDisconnect={whatsappLinked ? handleWhatsAppDisconnect : undefined}
-        />
-        <ConnectionCard
-          title="Telegram"
-          subtitle={telegramSubtitle}
-          logo="telegram"
-          status={telegramCardStatus}
-          action={{ label: "Link" }}
-          onActionClick={telegramLinked ? undefined : () => setShowTelegramLink(true)}
-          onDisconnect={telegramLinked ? handleTelegramDisconnect : undefined}
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gutter">
+        {telegramLoading ? (
+          <CardSkeleton />
+        ) : (
+          <ConnectionCard
+            title="Telegram"
+            subtitle={telegramLinked ? "Linked to your account" : "Link your chat to start"}
+            logo="telegram"
+            status={telegramLinked ? "on" : "pending"}
+            action={{ label: "Link" }}
+            onActionClick={telegramLinked ? undefined : () => setShowTelegramLink(true)}
+            onDisconnect={telegramLinked ? handleTelegramDisconnect : undefined}
+            disconnecting={disconnecting === "telegram"}
+          />
+        )}
+
+        {googleLoading ? (
+          <>
+            <CardSkeleton />
+            <CardSkeleton />
+          </>
+        ) : (
+          <>
+            <ConnectionCard
+              title="Calendar"
+              subtitle={googleCalendarConnected ? "Google Calendar access granted" : "Not linked"}
+              logo="calendar"
+              status={googleCalendarConnected ? "on" : "off"}
+              action={{ label: "Connect Google", href: googleConnected ? undefined : googleOAuthUrl }}
+              onDisconnect={googleConnected ? handleGoogleDisconnect : undefined}
+              disconnecting={disconnecting === "google"}
+            />
+            <ConnectionCard
+              title="Drive"
+              subtitle={googleDriveConnected ? "Google Drive access granted" : "Not linked"}
+              logo="drive"
+              status={googleDriveConnected ? "on" : "off"}
+              action={{ label: "Connect Google", href: googleConnected ? undefined : googleOAuthUrl }}
+              onDisconnect={googleConnected ? handleGoogleDisconnect : undefined}
+              disconnecting={disconnecting === "google"}
+            />
+          </>
+        )}
       </div>
 
-      {showWhatsAppLink && (
-        <WhatsAppLinkModal
-          onLinked={closeWhatsAppLink}
-          onClose={closeWhatsAppLink}
-        />
-      )}
-
       {showTelegramLink && (
-        <TelegramLinkModal
-          onLinked={closeTelegramLink}
-          onClose={closeTelegramLink}
-        />
+        <TelegramLinkModal onLinked={closeTelegramLink} onClose={closeTelegramLink} />
       )}
     </>
   );

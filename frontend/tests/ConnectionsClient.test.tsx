@@ -6,9 +6,7 @@ import { ConnectionsClient } from "@/components/ConnectionsClient";
 const GOOGLE_OAUTH_URL = "/api/auth/google-redirect";
 
 function mockFetchByUrl(status: {
-  connected: boolean;
-  status: string;
-  whatsappLinked?: boolean;
+  googleConnected?: boolean;
   telegramLinked?: boolean;
 }) {
   vi.stubGlobal(
@@ -16,14 +14,17 @@ function mockFetchByUrl(status: {
     vi.fn().mockImplementation((url: string) => {
       let body: unknown = null;
       const u = decodeURIComponent(typeof url === "string" ? url : String(url));
-      if (u.includes("/api/whatsapp/status")) {
-        body = { connected: status.connected, status: status.status };
-      } else if (u.includes("/api/whatsapp/link-status")) {
-        body = { linked: status.whatsappLinked ?? false, chatId: status.whatsappLinked ? "555@c.us" : null };
-      } else if (u.includes("/api/telegram/webhook-info")) {
-        body = { url: "https://webhook.example.com", pending_update_count: 0 };
+      if (u.includes("/api/auth/google/status")) {
+        const connected = status.googleConnected ?? false;
+        body = {
+          connected,
+          calendar_connected: connected,
+          drive_connected: connected,
+          has_refresh_token: connected,
+          expiry_date: null,
+        };
       } else if (u.includes("/api/telegram/link-status")) {
-        body = { linked: status.telegramLinked ?? false, chatId: null };
+        body = { linked: status.telegramLinked ?? false, chatId: status.telegramLinked ? "123" : null };
       }
       return Promise.resolve({
         ok: true,
@@ -54,99 +55,77 @@ describe("ConnectionsClient", () => {
     );
   }
 
-  const defaultProps = {
-    googleConnected: false,
-    googleCalendarConnected: false,
-    googleDriveConnected: false,
-    googleOAuthUrl: GOOGLE_OAUTH_URL,
-  };
+  it("should render Telegram, Calendar and Drive cards once statuses load", async () => {
+    mockFetchByUrl({});
 
-  it("should render all four connection cards", async () => {
-    mockFetchByUrl({ connected: false, status: "disconnected" });
-
-    renderWithSWR(<ConnectionsClient {...defaultProps} />);
-
-    expect(screen.getByText("Calendar")).toBeInTheDocument();
-    expect(screen.getByText("Drive")).toBeInTheDocument();
-    expect(screen.getByText("WhatsApp")).toBeInTheDocument();
-    expect(screen.getByText("Telegram")).toBeInTheDocument();
-  });
-
-  it("should show Google Calendar as Connected when connected", async () => {
-    mockFetchByUrl({ connected: false, status: "disconnected" });
-
-    renderWithSWR(
-      <ConnectionsClient {...defaultProps} googleConnected={true} googleCalendarConnected={true} />
-    );
-
-    const connectedBadges = screen.getAllByText("Connected");
-    expect(connectedBadges.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("should show WhatsApp as Bot offline when bot is disconnected and not linked", async () => {
-    mockFetchByUrl({ connected: false, status: "disconnected" });
-
-    renderWithSWR(<ConnectionsClient {...defaultProps} />);
+    renderWithSWR(<ConnectionsClient googleOAuthUrl={GOOGLE_OAUTH_URL} />);
 
     await waitFor(() => {
-      expect(screen.getByText("Bot offline")).toBeInTheDocument();
+      expect(screen.getByText("Telegram")).toBeInTheDocument();
+      expect(screen.getByText("Calendar")).toBeInTheDocument();
+      expect(screen.getByText("Drive")).toBeInTheDocument();
     });
+    expect(screen.queryByText("WhatsApp")).not.toBeInTheDocument();
   });
 
-  it("should show WhatsApp Link button when not linked", async () => {
-    mockFetchByUrl({ connected: false, status: "disconnected" });
+  it("should only request google and telegram status", async () => {
+    mockFetchByUrl({});
 
-    renderWithSWR(<ConnectionsClient {...defaultProps} />);
+    renderWithSWR(<ConnectionsClient googleOAuthUrl={GOOGLE_OAUTH_URL} />);
 
     await waitFor(() => {
-      const linkButtons = screen.getAllByText("Link");
-      expect(linkButtons.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("Telegram")).toBeInTheDocument();
     });
+
+    const urls = vi.mocked(fetch).mock.calls.map(([u]) => decodeURIComponent(String(u)));
+    expect(urls.some((u) => u.includes("/api/auth/google/status"))).toBe(true);
+    expect(urls.some((u) => u.includes("/api/telegram/link-status"))).toBe(true);
+    expect(urls.some((u) => u.includes("whatsapp"))).toBe(false);
+    expect(urls.some((u) => u.includes("webhook-info"))).toBe(false);
   });
 
-  it("should show WhatsApp as Linked when user is linked", async () => {
-    mockFetchByUrl({ connected: false, status: "disconnected", whatsappLinked: true });
+  it("should show Google Calendar and Drive as Connected when connected", async () => {
+    mockFetchByUrl({ googleConnected: true });
 
-    renderWithSWR(<ConnectionsClient {...defaultProps} />);
+    renderWithSWR(<ConnectionsClient googleOAuthUrl={GOOGLE_OAUTH_URL} />);
 
     await waitFor(() => {
-      expect(screen.getByText("Linked")).toBeInTheDocument();
+      expect(screen.getAllByText("Connected").length).toBe(2);
     });
+    expect(screen.getAllByText("Disconnect").length).toBe(2);
   });
 
-  it("should show Connect Google link when Google is not connected", async () => {
-    mockFetchByUrl({ connected: false, status: "disconnected" });
+  it("should show Connect Google links when Google is not connected", async () => {
+    mockFetchByUrl({});
 
-    renderWithSWR(<ConnectionsClient {...defaultProps} />);
+    renderWithSWR(<ConnectionsClient googleOAuthUrl={GOOGLE_OAUTH_URL} />);
 
     await waitFor(() => {
       const googleLinks = screen.getAllByText("Connect Google");
       expect(googleLinks.length).toBe(2);
-      const firstLink = googleLinks[0].closest("a");
-      expect(firstLink).toHaveAttribute("href", GOOGLE_OAUTH_URL);
+      expect(googleLinks[0].closest("a")).toHaveAttribute("href", GOOGLE_OAUTH_URL);
     });
   });
 
-  it("should show Disconnect button when WhatsApp is linked", async () => {
-    mockFetchByUrl({ connected: false, status: "disconnected", whatsappLinked: true });
+  it("should show Telegram as Pending with a Link button when not linked", async () => {
+    mockFetchByUrl({});
 
-    renderWithSWR(<ConnectionsClient {...defaultProps} />);
+    renderWithSWR(<ConnectionsClient googleOAuthUrl={GOOGLE_OAUTH_URL} />);
 
     await waitFor(() => {
-      const disconnectButtons = screen.getAllByText("Disconnect");
-      expect(disconnectButtons.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("Pending")).toBeInTheDocument();
+      expect(screen.getByText("Link")).toBeInTheDocument();
     });
   });
 
-  it("should show Pending status when WhatsApp bot is connecting", async () => {
-    mockFetchByUrl({ connected: false, status: "connecting" });
+  it("should show Telegram as Connected with a Disconnect button when linked", async () => {
+    mockFetchByUrl({ telegramLinked: true });
 
-    renderWithSWR(<ConnectionsClient {...defaultProps} />);
+    renderWithSWR(<ConnectionsClient googleOAuthUrl={GOOGLE_OAUTH_URL} />);
 
     await waitFor(() => {
-      const pendingBadges = screen.getAllByText("Pending");
-      expect(pendingBadges.length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByText("Bot starting...")).toBeInTheDocument();
+      expect(screen.getByText("Linked to your account")).toBeInTheDocument();
+      expect(screen.getByText("Disconnect")).toBeInTheDocument();
     });
   });
 });

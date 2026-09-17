@@ -99,11 +99,6 @@ vi.mock("../src/services/telegram-link.js", () => ({
   getTelegramLinkStatus: vi.fn(),
 }));
 
-vi.mock("../src/services/whatsapp-link.js", () => ({
-  consumeWhatsAppLinkToken: vi.fn(),
-  getUserIdByWhatsAppChatId: vi.fn().mockResolvedValue(null),
-}));
-
 vi.mock("../src/services/user-config.js", () => ({
   getUserSystemPrompt: vi.fn().mockResolvedValue(null),
 }));

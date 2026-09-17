@@ -23,7 +23,7 @@ export default function PrivacyPage() {
             <h2 className="font-sans font-l text-text-primary mb-2">1. Overview</h2>
             <p>
               KillaAssistant (&ldquo;the Service&rdquo;) is a multi-user AI assistant
-              that operates through Telegram and WhatsApp. Users connect their own
+              that operates through Telegram. Users connect their own
               Google account, supply their own LLM provider API keys, and chat with
               the bot to delegate calendar and file management tasks.
             </p>
@@ -121,7 +121,7 @@ export default function PrivacyPage() {
               <li>NVIDIA NIM (LLM inference — your API key, your requests)</li>
               <li>Groq (voice transcription — your API key, your requests)</li>
               <li>Google Calendar and Google Drive (your OAuth authorization)</li>
-              <li>Telegram Bot API and OpenWA / WhatsApp Web (chat delivery)</li>
+              <li>Telegram Bot API (chat delivery)</li>
             </ul>
           </div>
 

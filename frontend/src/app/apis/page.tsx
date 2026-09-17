@@ -7,25 +7,20 @@ import { redirect } from "next/navigation";
 
 export default async function ApisPage() {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getSession() parses the cookie locally; the middleware already validated
+  // it, and every proxied request re-verifies the JWT on the backend.
+  const { data: { session } } = await supabase.auth.getSession();
 
-  if (!user) {
+  if (!session?.user) {
     redirect("/login");
   }
 
   return (
-    <AppShell title="APIs">
-      <div className="mb-2">
-        <h3 className="font-sans font-xl text-text-primary mb-1">
-          AI APIs
-        </h3>
-        <p className="text-sm text-text-secondary">
-          API keys are encrypted (AES-256-GCM).
-        </p>
-      </div>
-      <ApiConfigForm userId={user.id} />
+    <AppShell
+      title="AI APIs"
+      description="Bring your own keys. They are encrypted with AES-256-GCM and only decrypted at inference time."
+    >
+      <ApiConfigForm userId={session.user.id} />
     </AppShell>
   );
 }

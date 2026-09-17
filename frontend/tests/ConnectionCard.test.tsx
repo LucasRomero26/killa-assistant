@@ -37,9 +37,9 @@ describe("ConnectionCard", () => {
   it("should show Disconnected badge when status is off", () => {
     render(
       <ConnectionCard
-        title="WhatsApp"
+        title="Telegram"
         subtitle="Not linked"
-        logo="whatsapp"
+        logo="telegram"
         status="off"
         action={{ label: "Connect" }}
         onActionClick={() => {}}

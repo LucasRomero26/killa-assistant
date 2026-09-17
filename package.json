@@ -2,7 +2,7 @@
   "name": "killa-assistant",
   "version": "1.0.0",
   "private": true,
-  "description": "Multi-user AI assistant with MCP-style tool calling, operating through Telegram and WhatsApp",
+  "description": "Multi-user AI assistant with MCP-style tool calling, operating through Telegram",
   "workspaces": ["backend", "frontend"],
   "scripts": {
     "dev:backend": "npm run dev --workspace backend",

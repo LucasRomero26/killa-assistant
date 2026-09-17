@@ -151,7 +151,7 @@ export function ApiConfigForm({ userId }: { userId: string }) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
         {[0, 1].map((i) => (
-          <div key={i} className="rounded-xl p-6 border border-border">
+          <div key={i} className="surface rounded-xl p-6">
             <div className="skeleton h-6 w-32 rounded mb-4"></div>
             <div className="skeleton h-10 w-full rounded mb-3"></div>
             <div className="skeleton h-10 w-full rounded mb-3"></div>
@@ -179,17 +179,24 @@ export function ApiConfigForm({ userId }: { userId: string }) {
 
           return (
             <div key={provider} className="surface rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 rounded-lg bg-bg-elevated flex items-center justify-center">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-11 h-11 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center">
                   <Icon size={20} className="text-accent" />
                 </div>
-                <div className="flex-1">
-                  <h4 className="text-text-primary font-medium">{info.name}</h4>
-                  <p className="text-sm text-text-secondary">
-                    {hasKey ? "Configured" : "Not configured"}
-                  </p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-text-primary font-semibold tracking-tight">{info.name}</h4>
+                  <p className="text-xs text-text-tertiary font-mono truncate">{info.defaultModel}</p>
                 </div>
-                <span className={`w-2.5 h-2.5 rounded-full ${hasKey ? "bg-success" : "bg-error"}`}></span>
+                <span
+                  className={`pill border ${
+                    hasKey
+                      ? "text-success bg-success/10 border-success/20"
+                      : "text-text-tertiary bg-bg-elevated/60 border-border"
+                  }`}
+                >
+                  <span className="pill-dot" />
+                  {hasKey ? "Configured" : "Not set"}
+                </span>
               </div>
 
               <div className="space-y-4">
@@ -207,7 +214,7 @@ export function ApiConfigForm({ userId }: { userId: string }) {
                       }))
                     }
                     placeholder={info.placeholder}
-                    className="w-full bg-bg-input border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary font-mono focus:border-accent focus:ring-0 transition-colors placeholder:text-text-tertiary"
+                    className="input font-mono"
                   />
                 </div>
 
@@ -224,7 +231,7 @@ export function ApiConfigForm({ userId }: { userId: string }) {
                         [provider]: e.target.value,
                       }))
                     }
-                    className="w-full bg-bg-input border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary font-mono focus:border-accent focus:ring-0 transition-colors placeholder:text-text-tertiary"
+                    className="input font-mono"
                   />
                 </div>
 
@@ -238,7 +245,7 @@ export function ApiConfigForm({ userId }: { userId: string }) {
                 <button
                   onClick={() => saveProvider(provider)}
                   disabled={saving === provider || !newKeys[provider].trim()}
-                  className="w-full bg-accent text-accent-foreground py-2.5 rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn btn-primary w-full"
                 >
                   {saving === provider ? "Saving..." : "Save API Key"}
                 </button>
@@ -247,7 +254,7 @@ export function ApiConfigForm({ userId }: { userId: string }) {
                   <button
                     onClick={() => deleteProvider(provider)}
                     disabled={deleting === provider}
-                    className="w-full flex items-center justify-center gap-2 bg-transparent border border-border text-text-secondary py-2.5 rounded-lg text-sm font-medium hover:bg-bg-elevated hover:text-error hover:border-error/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn btn-danger-ghost w-full"
                   >
                     <Trash2 size={14} />
                     {deleting === provider ? "Deleting..." : "Delete API Key"}

@@ -3,24 +3,23 @@ import { timingSafeEqual } from "node:crypto";
 
 /**
  * Validates the admin token sent by the operator for privileged endpoints
- * (WhatsApp bot start/stop, Telegram webhook setup, QR WebSocket).
+ * (Telegram webhook setup/teardown).
  *
  * Security measures:
- *  - Reads the token from the `x-admin-token` header (preferred).
- *  - Falls back to `?adminToken=...` query param only for the QR page,
- *    which the operator opens in a browser by manually typing the URL.
+ *  - Reads the token from the `x-admin-token` header (preferred), with a
+ *    `?adminToken=...` query fallback for URLs typed manually in a browser.
  *  - Uses `crypto.timingSafeEqual` to prevent timing-based brute force.
- *  - Returns 503 if `WHATSAPP_ADMIN_TOKEN` env var is not configured.
+ *  - Returns 503 if no admin token is configured on the server.
  *  - Returns 403 on mismatch (no payload leak).
  */
 export function requireAdmin(
   request: FastifyRequest,
   reply: FastifyReply
 ): boolean {
-  const adminToken = process.env.WHATSAPP_ADMIN_TOKEN;
+  const adminToken = process.env.ADMIN_TOKEN ?? process.env.WHATSAPP_ADMIN_TOKEN;
   if (!adminToken) {
     reply.code(503).send({
-      error: "WHATSAPP_ADMIN_TOKEN is not configured on the server",
+      error: "ADMIN_TOKEN is not configured on the server",
     });
     return false;
   }

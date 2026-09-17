@@ -31,7 +31,7 @@ export default function TermsPage() {
             <h2 className="font-sans font-l text-text-primary mb-2">2. Description</h2>
             <p>
               KillaAssistant is a multi-user AI assistant that operates through
-              Telegram and WhatsApp. Users connect their own Google account and
+              Telegram. Users connect their own Google account and
               supply their own LLM provider API keys to delegate calendar and file
               management tasks to the assistant.
             </p>
@@ -71,7 +71,7 @@ export default function TermsPage() {
             <h2 className="font-sans font-l text-text-primary mb-2">6. Third-party services</h2>
             <p>
               The Service integrates with third-party providers (Google, NVIDIA,
-              Groq, Telegram, WhatsApp, Supabase, Vercel, DigitalOcean). You are
+              Groq, Telegram, Supabase, Vercel, DigitalOcean). You are
               responsible for complying with each provider&#39;s terms of service
               when using your own accounts and API keys.
             </p>

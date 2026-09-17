@@ -4,7 +4,6 @@ import { NvidiaError } from "../services/nvidia.js";
 import { getUserApiKeys, buildMissingKeysMessage } from "../services/user-api-keys.js";
 import { getUserSystemPrompt } from "../services/user-config.js";
 import { getUserIdByChatId as getTelegramUserIdByChatId } from "../services/telegram-link.js";
-import { getUserIdByWhatsAppChatId } from "../services/whatsapp-link.js";
 import {
   createPendingMedia,
   getPendingMedia,
@@ -31,13 +30,8 @@ const DEFAULT_SYSTEM_PROMPT =
   "Always respond in Spanish unless the user writes in another language. " +
   "Respond concisely and helpfully.";
 
-const NEEDS_LINK_MESSAGE_TELEGRAM =
+const NEEDS_LINK_MESSAGE =
   "No has vinculado tu cuenta de KillaAssistant con Telegram.\n\n" +
-  "Ingresa a https://killaassistant.vercel.app/connections, " +
-  "genera un codigo de vinculacion y envialo aqui con /start KILLA-XXXXXX.";
-
-const NEEDS_LINK_MESSAGE_WHATSAPP =
-  "No has vinculado tu cuenta de KillaAssistant con WhatsApp.\n\n" +
   "Ingresa a https://killaassistant.vercel.app/connections, " +
   "genera un codigo de vinculacion y envialo aqui con /start KILLA-XXXXXX.";
 
@@ -45,14 +39,7 @@ async function resolveUserId(channel: MessagingChannel, chatId: string): Promise
   if (channel === "telegram") {
     return getTelegramUserIdByChatId(chatId);
   }
-  if (channel === "whatsapp") {
-    return getUserIdByWhatsAppChatId(chatId);
-  }
   return null;
-}
-
-function needsLinkMessage(channel: MessagingChannel): string {
-  return channel === "telegram" ? NEEDS_LINK_MESSAGE_TELEGRAM : NEEDS_LINK_MESSAGE_WHATSAPP;
 }
 
 const MEDIA_RECEIVED_MESSAGE_PHOTO =
@@ -90,11 +77,11 @@ export async function handleMediaMessage(
 ): Promise<string> {
   const resolvedUserId = await resolveUserId(msg.channel, msg.chatId);
   if (!resolvedUserId) {
-    return needsLinkMessage(msg.channel);
+    return NEEDS_LINK_MESSAGE;
   }
   const userId = resolvedUserId;
 
-  const pendingMedia = await createPendingMedia({
+  await createPendingMedia({
     userId,
     channel: msg.channel,
     chatId: msg.chatId,
@@ -106,10 +93,6 @@ export async function handleMediaMessage(
     mediaType: msg.mediaType,
     caption: msg.caption,
   });
-
-  if (msg.channel === "whatsapp" && msg.mediaBuffer) {
-    setCachedMediaBuffer(pendingMedia.id, msg.mediaBuffer.buffer, msg.mediaBuffer.mimeType, msg.fileName);
-  }
 
   await logActivity({
     userId,
@@ -131,7 +114,7 @@ export async function handleTextMessage(
 ): Promise<string> {
   const resolvedUserId = await resolveUserId(msg.channel, msg.chatId);
   if (!resolvedUserId) {
-    return needsLinkMessage(msg.channel);
+    return NEEDS_LINK_MESSAGE;
   }
   const userId = resolvedUserId;
 
@@ -209,7 +192,7 @@ export async function handleVoiceMessage(
 ): Promise<string> {
   const resolvedUserId = await resolveUserId(msg.channel, msg.chatId);
   if (!resolvedUserId) {
-    return needsLinkMessage(msg.channel);
+    return NEEDS_LINK_MESSAGE;
   }
   const userId = resolvedUserId;
 
@@ -339,10 +322,6 @@ export function clearCachedMediaBuffer(mediaId: string): void {
   mediaBufferCache.delete(mediaId);
 }
 
-export function setCachedMediaBuffer(mediaId: string, buffer: Buffer, mimeType: string, fileName?: string): void {
-  mediaBufferCache.set(mediaId, { buffer, mimeType, fileName });
-}
-
 async function buildMediaContext(
   pendingMedia: PendingMedia | null,
   channel: MessagingChannel
@@ -357,8 +336,6 @@ async function buildMediaContext(
       return null;
     }
   }
-
-  // WhatsApp media is already cached when the message arrived (set in handleMediaMessage)
 
   const parts: string[] = [
     `[PENDING FILE — media_id: ${pendingMedia.id}]`,
