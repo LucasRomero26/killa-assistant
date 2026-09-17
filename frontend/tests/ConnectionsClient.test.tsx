@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { SWRConfig } from "swr";
 import { ConnectionsClient } from "@/components/ConnectionsClient";
 
-const GOOGLE_OAUTH_URL = "/api/auth/google-redirect";
+const GOOGLE_OAUTH_URL = "/api/auth/google";
 
 function mockFetchByUrl(status: {
   googleConnected?: boolean;

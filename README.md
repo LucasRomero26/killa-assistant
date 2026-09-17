@@ -11,14 +11,16 @@ Users interact with the bot via text, voice notes, photos, or documents. The bac
 Voice messages are transcribed with Groq Whisper. Photos and documents are held as "pending media" until the user's next message specifies what to do with them (e.g., "save this to Drive in the Documents folder").
 
 ```
-Telegram ──────────► Backend (Fastify)
-                          ├──► NVIDIA NIM (Llama 3.1) — LLM + tool calling
-                          ├──► Groq (Whisper) — voice transcription
-                          ├──► Google Calendar + Drive (OAuth 2.0)
-                          └──► Supabase (PostgreSQL + RLS)
+Telegram ──► /api/webhooks/telegram ──► Next.js Route Handlers (Vercel)
+                                          ├──► NVIDIA NIM (Llama 3.1) — LLM + tool calling
+                                          ├──► Groq (Whisper) — voice transcription
+                                          ├──► Google Calendar + Drive (OAuth 2.0)
+                                          └──► Supabase (PostgreSQL + RLS)
 
-Frontend (Next.js) ──► /api/proxy ──► Backend (JWT-authenticated)
+Control panel (Next.js) ──► /api/* (same app, Supabase session cookie)
 ```
+
+Everything runs inside one Next.js app on Vercel — there is no separate backend server. The Telegram webhook acknowledges immediately and runs the LLM/tool loop in the background (`waitUntil`), so Telegram never re-delivers slow updates.
 
 ## Usage
 
@@ -53,8 +55,8 @@ Send a message to the bot on Telegram:
 
 | Component | Technology |
 | :-- | :-- |
-| Backend | Node.js 20+, TypeScript, Fastify 5, Docker (node:20-slim, no browser deps) |
-| Frontend | Next.js 14, Tailwind CSS, SWR |
+| App | Next.js 14 (App Router + Route Handlers), TypeScript, Tailwind CSS, SWR |
+| Hosting | Vercel (serverless functions, no server to maintain) |
 | Database | PostgreSQL, Supabase (RLS, Auth) |
 | LLM | NVIDIA NIM (Llama 3.1 70B Instruct) — per-user API key |
 | Transcription | Groq (Whisper Large v3) — per-user API key |
@@ -63,26 +65,43 @@ Send a message to the bot on Telegram:
 
 ## Security
 
-- **JWT auth** on all user endpoints — the frontend proxy injects the token server-side, never exposed to the browser
+- **Session auth** on all user endpoints — route handlers validate the Supabase session cookie server-side; no token is ever exposed to the browser
 - **AES-256-GCM encryption** for API keys and Google OAuth tokens at rest
 - **Supabase RLS** on every table — users can only access their own data
 - **Prompt injection sanitizer** — filters instruction-override and data-exfiltration patterns
-- **Rate limiting** — global 100 req/min with per-endpoint overrides
 - **Webhook verification** — Telegram webhook requires a shared secret token
 - **Atomic link tokens** — race-condition-safe `UPDATE ... WHERE status = 'pending'` consumption
 
 ## CI/CD
 
-**CI** (`ci.yml`): On every PR and push to `main`, runs typecheck, lint, and tests for both backend and frontend in parallel.
+**CI** (`ci.yml`): On every PR and push to `main`, runs typecheck, lint, and tests (component tests in jsdom, server tests in Node).
 
-**CD** (`deploy.yml`): On push to `main`, compiles the backend on the GitHub runner, copies `dist/` to the DigitalOcean droplet via SCP, rebuilds the Docker container via SSH, and runs a health check.
+**Deploy**: Vercel auto-deploys the whole app (pages + API routes + Telegram webhook) on push to `main`. Nothing else to provision.
 
-**Frontend**: Vercel auto-deploys on push to `main`.
+### Environment variables (Vercel → Project → Settings → Environment Variables)
 
-### Required GitHub Secrets
+See [`.env.example`](.env.example). The ones without a default:
 
-| Secret | Description |
+| Variable | Description |
 | :-- | :-- |
-| `DROPLET_IP` | Droplet public IP |
-| `DROPLET_SSH_KEY` | Private SSH key for the droplet |
-| `HEALTH_URL` | Backend health endpoint URL |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-side Supabase access (bypasses RLS) |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` | Bot token from @BotFather and a random ≥32-char secret |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OAuth client; redirect URI is `https://<app>/api/auth/callback/google` |
+| `ENCRYPTION_KEY` | 64 hex chars. Must stay constant — it decrypts stored keys and tokens |
+| `ADMIN_TOKEN` | Operator token for `/api/telegram/setup-webhook` |
+
+### Register the Telegram webhook (once per deployment URL)
+
+```bash
+curl -X POST https://<app>/api/telegram/setup-webhook -H "x-admin-token: $ADMIN_TOKEN"
+```
+
+## Local development
+
+```bash
+npm install
+cp .env.example frontend/.env.local   # fill in values
+npm run dev                            # http://localhost:3000
+npm test
+```

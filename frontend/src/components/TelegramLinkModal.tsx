@@ -4,8 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import useSWR from "swr";
 import { X, Copy, Check, Loader2, ExternalLink } from "lucide-react";
 import { ServiceLogo } from "./ServiceLogo";
-import { proxyFetcher } from "@/lib/swr-fetcher";
-import { proxyFetch } from "@/lib/api";
+import { apiFetcher } from "@/lib/swr-fetcher";
+import { apiFetch } from "@/lib/api";
 
 interface TelegramLinkModalProps {
   onLinked: () => void;
@@ -38,7 +38,7 @@ export function TelegramLinkModal({ onLinked, onClose }: TelegramLinkModalProps)
       setLoading(true);
       setError(null);
       try {
-        const res = await proxyFetch("/api/telegram/link-token", { method: "POST" });
+        const res = await apiFetch("/api/telegram/link-token", { method: "POST" });
         if (!res.ok) throw new Error("Failed to generate token");
         const data = (await res.json()) as LinkTokenResponse;
         if (!cancelled) setTokenData(data);
@@ -64,7 +64,7 @@ export function TelegramLinkModal({ onLinked, onClose }: TelegramLinkModalProps)
   }, [onClose]);
 
   const linkStatusFetcher = useCallback(
-    (path: string) => proxyFetcher<LinkStatusResponse>(path),
+    (path: string) => apiFetcher<LinkStatusResponse>(path),
     []
   );
 
@@ -112,8 +112,8 @@ export function TelegramLinkModal({ onLinked, onClose }: TelegramLinkModalProps)
           <div
             className="inline-flex items-center justify-center w-12 h-12 rounded-xl border mb-4"
             style={{
-              backgroundColor: "color-mix(in oklab, #2AABEE 12%, transparent)",
-              borderColor: "color-mix(in oklab, #2AABEE 25%, transparent)",
+              backgroundColor: "color-mix(in oklab, #2AABEE 55%, var(--bg-elevated))",
+              borderColor: "color-mix(in oklab, #2AABEE 40%, transparent)",
             }}
           >
             <ServiceLogo name="telegram" size={26} />

@@ -3,9 +3,8 @@
 import { SWRConfig } from "swr";
 
 /**
- * App-wide SWR defaults. Every request goes through /api/proxy to a remote
- * backend, so avoid refetch storms: no refetch on window focus, and dedupe
- * identical keys requested within a few seconds of each other.
+ * App-wide SWR defaults: no refetch on window focus, and dedupe identical
+ * keys requested within a few seconds of each other.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   return (

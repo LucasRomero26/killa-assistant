@@ -4,7 +4,7 @@ interface ServiceLogoProps {
   className?: string;
 }
 
-/** Brand color used for the icon tile behind each service logo. */
+/** Brand color used for the tinted tile behind each (white) service logo. */
 export const SERVICE_COLOR: Record<ServiceLogoProps["name"], string> = {
   telegram: "#2AABEE",
   calendar: "#4285F4",
@@ -33,7 +33,7 @@ export function ServiceLogo({ name, size = 20, className = "" }: ServiceLogoProp
   return (
     <span
       className={`inline-flex items-center justify-center ${className}`}
-      style={{ width: size, height: size, color: SERVICE_COLOR[name] }}
+      style={{ width: size, height: size, color: "#ffffff" }}
       aria-hidden="true"
     >
       {LOGOS[name]}

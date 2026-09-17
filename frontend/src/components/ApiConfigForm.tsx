@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { Cpu, Mic, Check, Trash2 } from "lucide-react";
-import { proxyFetcher } from "@/lib/swr-fetcher";
-import { proxyFetch } from "@/lib/api";
+import { apiFetcher } from "@/lib/swr-fetcher";
+import { apiFetch } from "@/lib/api";
 
 type Provider = "nvidia_nim" | "groq";
 
@@ -38,7 +38,7 @@ const PROVIDER_INFO: Record<
 export function ApiConfigForm({ userId }: { userId: string }) {
   const { data: apiConfigs, isLoading } = useSWR<ApiConfigFromBackend[]>(
     "/api/api-config/config",
-    proxyFetcher
+    apiFetcher
   );
 
   const [configs, setConfigs] = useState<Record<Provider, ApiConfigFromBackend | null>>({
@@ -85,7 +85,7 @@ export function ApiConfigForm({ userId }: { userId: string }) {
         return;
       }
 
-      const res = await proxyFetch("/api/api-config/config", {
+      const res = await apiFetch("/api/api-config/config", {
         method: "POST",
         body: {
           provider,
@@ -127,7 +127,7 @@ export function ApiConfigForm({ userId }: { userId: string }) {
     setError(null);
 
     try {
-      const res = await proxyFetch("/api/api-config/config", {
+      const res = await apiFetch("/api/api-config/config", {
         method: "DELETE",
         body: { provider },
       });

@@ -9,7 +9,7 @@ export default function ConnectionsPage() {
       title="Connections"
       description="Link Telegram and grant Google access so the assistant can manage your calendar and files."
     >
-      <ConnectionsClient googleOAuthUrl="/api/auth/google-redirect" />
+      <ConnectionsClient googleOAuthUrl="/api/auth/google" />
     </AppShell>
   );
 }

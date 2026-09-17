@@ -71,8 +71,8 @@ export function ConnectionCard({
         <div
           className="w-11 h-11 rounded-lg flex items-center justify-center border"
           style={{
-            backgroundColor: `color-mix(in oklab, ${brand} 12%, transparent)`,
-            borderColor: `color-mix(in oklab, ${brand} 25%, transparent)`,
+            backgroundColor: `color-mix(in oklab, ${brand} 55%, var(--bg-elevated))`,
+            borderColor: `color-mix(in oklab, ${brand} 40%, transparent)`,
           }}
         >
           <ServiceLogo name={logo} size={22} />

@@ -60,11 +60,6 @@ vi.mock("@/lib/supabase-server", () => ({
     }),
 }));
 
-vi.mock("@/lib/api", () => ({
-  getBackendUrl: () => "http://localhost:3001",
-  backendFetch: vi.fn(),
-}));
-
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
   static lastInstance: MockWebSocket | null = null;

@@ -1,25 +1,21 @@
 /**
- * SWR fetcher that routes client-side requests through the /api/proxy
- * server route. The proxy authenticates the user via the Supabase session
- * cookie and forwards the request with a `Bearer <JWT>` header.
- *
- * Callers pass a backend path like `/api/whatsapp/status` (NOT a full URL).
- * Optional query params are appended to the proxied URL.
+ * SWR fetcher for this app's API route handlers. Callers pass a path like
+ * `/api/telegram/link-status`; optional query params are appended.
  */
-export async function proxyFetcher<T>(
+export async function apiFetcher<T>(
   arg: string | readonly [string, Record<string, string>?]
 ): Promise<T> {
-  const backendPath = typeof arg === "string" ? arg : arg[0];
+  const path = typeof arg === "string" ? arg : arg[0];
   const query = typeof arg === "string" ? undefined : arg[1];
 
-  let url = `/api/proxy?path=${encodeURIComponent(backendPath)}`;
+  const url = new URL(path, window.location.origin);
   if (query) {
     for (const [k, v] of Object.entries(query)) {
-      url += `&${encodeURIComponent(k)}=${encodeURIComponent(v)}`;
+      url.searchParams.set(k, v);
     }
   }
 
-  const res = await fetch(url);
+  const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Request failed: ${res.status}`);
   return (await res.json()) as T;
 }

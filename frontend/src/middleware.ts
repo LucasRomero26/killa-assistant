@@ -50,9 +50,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Page routes only. /api/* route handlers (proxy, google-redirect) read the
-  // session themselves, so running the middleware there would parse the
-  // cookie twice on every client fetch.
+  // Page routes only. /api/* route handlers validate the session themselves
+  // (and the Telegram webhook uses its own secret), so running the
+  // middleware there would only add latency.
   matcher: [
     "/((?!api/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],

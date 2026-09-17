@@ -4,8 +4,8 @@ import { useState, useCallback } from "react";
 import useSWR, { mutate } from "swr";
 import { ConnectionCard } from "./ConnectionCard";
 import { TelegramLinkModal } from "./TelegramLinkModal";
-import { proxyFetcher } from "@/lib/swr-fetcher";
-import { proxyFetch } from "@/lib/api";
+import { apiFetcher } from "@/lib/swr-fetcher";
+import { apiFetch } from "@/lib/api";
 
 interface GoogleStatus {
   connected: boolean;
@@ -59,12 +59,12 @@ export function ConnectionsClient({ googleOAuthUrl }: ConnectionsClientProps) {
 
   const { data: googleStatus, isLoading: googleLoading } = useSWR<GoogleStatus>(
     GOOGLE_STATUS_KEY,
-    proxyFetcher
+    apiFetcher
   );
 
   const { data: telegramLinkData, isLoading: telegramLoading } = useSWR<TelegramLinkStatus>(
     TELEGRAM_STATUS_KEY,
-    proxyFetcher
+    apiFetcher
   );
 
   const googleConnected = googleStatus?.connected ?? false;
@@ -75,7 +75,7 @@ export function ConnectionsClient({ googleOAuthUrl }: ConnectionsClientProps) {
   async function handleGoogleDisconnect() {
     setDisconnecting("google");
     try {
-      const res = await proxyFetch("/api/auth/google/disconnect", { method: "DELETE" });
+      const res = await apiFetch("/api/auth/google/disconnect", { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to disconnect");
       await mutate(GOOGLE_STATUS_KEY);
     } catch {
@@ -88,7 +88,7 @@ export function ConnectionsClient({ googleOAuthUrl }: ConnectionsClientProps) {
   async function handleTelegramDisconnect() {
     setDisconnecting("telegram");
     try {
-      const res = await proxyFetch("/api/telegram/unlink", { method: "DELETE" });
+      const res = await apiFetch("/api/telegram/unlink", { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to unlink");
       await mutate(TELEGRAM_STATUS_KEY);
     } catch {
