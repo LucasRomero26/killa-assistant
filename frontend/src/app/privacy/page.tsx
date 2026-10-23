@@ -1,9 +1,13 @@
 export const dynamic = "force-static";
 
-export const metadata = {
-  title: "Privacy Policy — KillaAssistant",
-  description: "How KillaAssistant collects, stores, and uses your data.",
-};
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "Privacy Policy",
+  description:
+    "How KillaAssistant collects, encrypts, stores and deletes your data: account details, Google OAuth tokens, LLM API keys and the messages you send the bot.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

@@ -59,7 +59,7 @@ export default function SignupPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-success/10 border border-success/20 text-success mb-5">
             <MailCheck size={26} />
           </div>
-          <h2 className="font-sans text-2xl text-text-primary mb-2">Check your email</h2>
+          <h1 className="font-sans text-2xl text-text-primary mb-2">Check your email</h1>
           <p className="text-sm text-text-secondary mb-6 leading-relaxed">
             We sent a confirmation link to{" "}
             <span className="text-text-primary font-medium">{email}</span>. Click it to activate
@@ -76,7 +76,7 @@ export default function SignupPage() {
         </div>
       ) : (
         <>
-          <h2 className="font-sans text-2xl text-text-primary">Create your account</h2>
+          <h1 className="font-sans text-2xl text-text-primary">Create your account</h1>
           <p className="text-sm text-text-secondary mt-1 mb-8">
             Set up your control panel in under a minute.
           </p>

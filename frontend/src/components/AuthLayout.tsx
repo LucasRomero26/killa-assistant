@@ -44,9 +44,9 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         </div>
 
         <div className="relative max-w-md">
-          <h1 className="font-sans text-4xl text-text-primary">
+          <p className="font-sans text-4xl text-text-primary">
             Your assistant, <span className="text-gradient">one message away.</span>
-          </h1>
+          </p>
           <p className="text-text-secondary mt-4 leading-relaxed">
             Delegate calendar, files and notes to an AI agent that lives in your Telegram.
           </p>

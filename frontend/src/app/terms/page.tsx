@@ -1,9 +1,13 @@
 export const dynamic = "force-static";
 
-export const metadata = {
-  title: "Terms of Service — KillaAssistant",
-  description: "Terms of service for KillaAssistant.",
-};
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "Terms of Service",
+  description:
+    "Terms of Service for KillaAssistant: acceptable use, your responsibilities for API keys and Google access, third-party providers and limitation of liability.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

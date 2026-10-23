@@ -1,9 +1,18 @@
 export const dynamic = "force-dynamic";
 
 import { AppShell } from "@/components/AppShell";
+import { pageMetadata } from "@/lib/metadata";
 import { ApiConfigForm } from "@/components/ApiConfigForm";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
+
+export const metadata = pageMetadata({
+  title: "AI APIs",
+  description:
+    "Add your NVIDIA NIM and Groq API keys to KillaAssistant. Keys are encrypted with AES-256-GCM and only decrypted at inference time.",
+  path: "/apis",
+  index: false,
+});
 
 export default async function ApisPage() {
   const supabase = await createSupabaseServerClient();

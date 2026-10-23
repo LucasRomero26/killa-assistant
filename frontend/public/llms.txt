@@ -1,0 +1,24 @@
+# KillaAssistant
+
+> KillaAssistant is a multi-user AI assistant that operates through Telegram. Each user connects their own Google account and supplies their own LLM provider API keys (NVIDIA NIM for the model, Groq for voice transcription), then chats with the bot to manage Google Calendar events and file photos and documents into Google Drive.
+
+The web app at https://killa-assistant.vercel.app is the control panel where users sign up, link Telegram, grant Google access, store their API keys and tune the assistant's behavior. The panel pages require login; the pages listed below are public.
+
+## Key facts
+
+- Channel: Telegram bot (text, voice notes, photos and documents)
+- Tools: Google Calendar (create and list events) and Google Drive (upload and organize files)
+- Models: bring your own NVIDIA NIM and Groq API keys
+- Security: API keys and Google OAuth tokens are encrypted at rest with AES-256-GCM; database access is isolated per user with Supabase Row-Level Security
+- Price: free to use; users pay their own LLM providers directly
+
+## Pages
+
+- [Create an account](https://killa-assistant.vercel.app/signup): sign up with email and password
+- [Sign in](https://killa-assistant.vercel.app/login): access the control panel
+- [Privacy Policy](https://killa-assistant.vercel.app/privacy): what data is stored, how it is encrypted, and how to delete it
+- [Terms of Service](https://killa-assistant.vercel.app/terms): acceptable use and limitations
+
+## Source
+
+- [GitHub repository](https://github.com/LucasRomero26/killa-assistant): source code and setup instructions

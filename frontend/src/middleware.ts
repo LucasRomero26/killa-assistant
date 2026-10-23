@@ -1,14 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth/callback", "/privacy", "/terms"];
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
-    return NextResponse.next();
-  }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -50,10 +44,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Page routes only. /api/* route handlers validate the session themselves
-  // (and the Telegram webhook uses its own secret), so running the
-  // middleware there would only add latency.
-  matcher: [
-    "/((?!api/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
-  ],
+  // Panel pages only. Public pages, robots.txt, sitemap.xml, llms.txt and
+  // the OG image stay reachable, and unknown URLs render the 404 page
+  // instead of bouncing to /login. /api/* route handlers validate the
+  // session themselves (and the Telegram webhook uses its own secret).
+  matcher: ["/", "/connections/:path*", "/apis/:path*", "/behavior/:path*"],
 };

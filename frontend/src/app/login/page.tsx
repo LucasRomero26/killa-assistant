@@ -9,6 +9,8 @@ import { AuthLayout } from "@/components/AuthLayout";
 export default function LoginPage() {
   return (
     <AuthLayout>
+      <h1 className="font-sans text-2xl text-text-primary">Welcome back</h1>
+      <p className="text-sm text-text-secondary mt-1 mb-8">Sign in to your control panel.</p>
       <Suspense fallback={<div className="h-72" />}>
         <LoginForm />
       </Suspense>
@@ -51,9 +53,6 @@ function LoginForm() {
 
   return (
     <>
-      <h2 className="font-sans text-2xl text-text-primary">Welcome back</h2>
-      <p className="text-sm text-text-secondary mt-1 mb-8">Sign in to your control panel.</p>
-
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label htmlFor="email" className="block text-xs font-medium text-text-secondary mb-2">
