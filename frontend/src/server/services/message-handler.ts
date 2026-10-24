@@ -32,7 +32,7 @@ const DEFAULT_SYSTEM_PROMPT =
 
 const NEEDS_LINK_MESSAGE =
   "No has vinculado tu cuenta de KillaAssistant con Telegram.\n\n" +
-  "Ingresa a https://killaassistant.vercel.app/connections, " +
+  "Ingresa a https://killa-assistant.vercel.app/connections, " +
   "genera un codigo de vinculacion y envialo aqui con /start KILLA-XXXXXX.";
 
 async function resolveUserId(channel: MessagingChannel, chatId: string): Promise<string | null> {
@@ -282,7 +282,7 @@ export function buildUserErrorMessage(error: unknown): string {
       case "rate_limit":
         return "The AI service is busy right now (rate limit). Please wait a moment and try again.";
       case "auth":
-        return "Tu API key de NVIDIA no es valida o ha expirado. Ve a https://killaassistant.vercel.app/apis para actualizarla.";
+        return "Tu API key de NVIDIA no es valida o ha expirado. Ve a https://killa-assistant.vercel.app/apis para actualizarla.";
       case "server":
         return "The AI service is experiencing issues. Please try again shortly.";
       case "network":
@@ -299,7 +299,7 @@ export function buildUserErrorMessage(error: unknown): string {
       case "rate_limit":
         return "The transcription service is busy right now. Please wait and try again.";
       case "auth":
-        return "Tu API key de Groq no es valida o ha expirado. Ve a https://killaassistant.vercel.app/apis para actualizarla.";
+        return "Tu API key de Groq no es valida o ha expirado. Ve a https://killa-assistant.vercel.app/apis para actualizarla.";
       case "server":
         return "The transcription service is experiencing issues. Please try again shortly.";
       case "network":

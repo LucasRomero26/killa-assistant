@@ -190,7 +190,7 @@ describe("Telegram webhook error handling", () => {
 
     expect(sendMessage).toHaveBeenCalledWith(
       123,
-      "Tu API key de NVIDIA no es valida o ha expirado. Ve a https://killaassistant.vercel.app/apis para actualizarla."
+      "Tu API key de NVIDIA no es valida o ha expirado. Ve a https://killa-assistant.vercel.app/apis para actualizarla."
     );
   });
 

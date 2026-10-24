@@ -63,7 +63,7 @@ export function buildMissingKeysMessage(missing: ("nvidia_nim" | "groq")[]): str
   return (
     "No puedes usar el asistente sin configurar tus propias credenciales de API.\n\n" +
     `Falta configurar: ${parts.join(" y ")}.\n\n` +
-    "Ingresa a https://killaassistant.vercel.app/apis para agregar tus API keys.\n\n" +
+    "Ingresa a https://killa-assistant.vercel.app/apis para agregar tus API keys.\n\n" +
     "NVIDIA: obtiene tu key en https://build.nvidia.com\n" +
     "Groq: obtiene tu key en https://console.groq.com"
   );

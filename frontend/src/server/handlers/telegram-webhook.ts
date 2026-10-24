@@ -16,7 +16,7 @@ import type { TelegramUpdate } from "../types";
 
 const NEEDS_LINK_MESSAGE =
   "No has vinculado tu cuenta de KillaAssistant con Telegram.\n\n" +
-  "Ingresa a https://killaassistant.vercel.app/connections, " +
+  "Ingresa a https://killa-assistant.vercel.app/connections, " +
   "genera un codigo de vinculacion y envialo aqui con /start KILLA-XXXXXX.\n\n" +
   "Mientras no vincules tu cuenta, no podre responderte.";
 
@@ -25,8 +25,8 @@ const LINK_SUCCESS_MESSAGE =
 
 const LINK_ERROR_MESSAGES: Record<string, string> = {
   invalid_token: "Codigo de vinculacion invalido. Verifica el codigo en la web e intentalo de nuevo.",
-  already_used: "Este codigo ya fue usado. Genera uno nuevo en https://killaassistant.vercel.app/connections",
-  expired: "Este codigo ha expirado. Genera uno nuevo en https://killaassistant.vercel.app/connections",
+  already_used: "Este codigo ya fue usado. Genera uno nuevo en https://killa-assistant.vercel.app/connections",
+  expired: "Este codigo ha expirado. Genera uno nuevo en https://killa-assistant.vercel.app/connections",
   db_error: "Error al vincular la cuenta. Intentalo de nuevo en unos minutos.",
 };
 
