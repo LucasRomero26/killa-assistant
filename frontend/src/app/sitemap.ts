@@ -2,7 +2,8 @@ import type { MetadataRoute } from "next";
 import { PUBLIC_ROUTES, SITE_URL } from "@/lib/site";
 
 const PRIORITY: Record<(typeof PUBLIC_ROUTES)[number], number> = {
-  "/signup": 1,
+  "/": 1,
+  "/signup": 0.9,
   "/login": 0.8,
   "/privacy": 0.3,
   "/terms": 0.3,

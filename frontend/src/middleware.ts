@@ -48,5 +48,5 @@ export const config = {
   // the OG image stay reachable, and unknown URLs render the 404 page
   // instead of bouncing to /login. /api/* route handlers validate the
   // session themselves (and the Telegram webhook uses its own secret).
-  matcher: ["/", "/connections/:path*", "/apis/:path*", "/behavior/:path*"],
+  matcher: ["/connections/:path*", "/apis/:path*", "/behavior/:path*"],
 };

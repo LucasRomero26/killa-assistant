@@ -16,4 +16,4 @@ export const SITE_URL = (
 ).replace(/\/$/, "");
 
 /** Routes anyone can visit; everything else sits behind login. */
-export const PUBLIC_ROUTES = ["/login", "/signup", "/privacy", "/terms"] as const;
+export const PUBLIC_ROUTES = ["/", "/login", "/signup", "/privacy", "/terms"] as const;
