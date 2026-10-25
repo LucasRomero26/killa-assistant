@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { useState } from "react";
 import { LogOut } from "lucide-react";
+import { ButtonSpinner } from "@/components/ButtonSpinner";
 
 interface HeaderProps {
   title: string;
@@ -41,7 +42,7 @@ export function Header({ title }: HeaderProps) {
         disabled={loggingOut}
         className="btn btn-secondary !py-1.5 !px-3 text-xs"
       >
-        <LogOut size={14} />
+        {loggingOut ? <ButtonSpinner /> : <LogOut size={14} />}
         <span>{loggingOut ? "Signing out..." : "Logout"}</span>
       </button>
     </header>

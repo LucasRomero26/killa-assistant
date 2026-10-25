@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { Cpu, Mic, Check, Trash2 } from "lucide-react";
+import { ButtonSpinner } from "@/components/ButtonSpinner";
 import { apiFetcher } from "@/lib/swr-fetcher";
 import { apiFetch } from "@/lib/api";
 
@@ -246,8 +247,10 @@ export function ApiConfigForm({ userId }: { userId: string }) {
                 <button
                   onClick={() => saveProvider(provider)}
                   disabled={saving === provider || !newKeys[provider].trim()}
+                  aria-busy={saving === provider || undefined}
                   className="btn btn-primary w-full"
                 >
+                  {saving === provider && <ButtonSpinner />}
                   {saving === provider ? "Saving..." : "Save API Key"}
                 </button>
 
@@ -255,9 +258,10 @@ export function ApiConfigForm({ userId }: { userId: string }) {
                   <button
                     onClick={() => deleteProvider(provider)}
                     disabled={deleting === provider}
+                    aria-busy={deleting === provider || undefined}
                     className="btn btn-danger-ghost w-full"
                   >
-                    <Trash2 size={14} />
+                    {deleting === provider ? <ButtonSpinner /> : <Trash2 size={14} />}
                     {deleting === provider ? "Deleting..." : "Delete API Key"}
                   </button>
                 )}

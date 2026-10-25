@@ -6,6 +6,7 @@ import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { LayoutGrid, Brain, Key, X, Menu, LogOut, ExternalLink } from "lucide-react";
 import { Logo } from "./Logo";
+import { ButtonSpinner } from "@/components/ButtonSpinner";
 
 const NAV_ITEMS = [
   { href: "/connections", label: "Connections", icon: LayoutGrid },
@@ -111,7 +112,7 @@ export function Sidebar() {
             disabled={loggingOut}
             className="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-elevated/70 hover:text-text-primary transition-colors disabled:opacity-50 md:hidden"
           >
-            <LogOut size={16} className="text-text-tertiary" />
+            {loggingOut ? <ButtonSpinner size={16} /> : <LogOut size={16} className="text-text-tertiary" />}
             {loggingOut ? "Signing out..." : "Logout"}
           </button>
         </div>

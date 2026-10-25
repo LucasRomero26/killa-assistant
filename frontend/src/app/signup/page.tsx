@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { MailCheck } from "lucide-react";
 import { AuthLayout } from "@/components/AuthLayout";
+import { ButtonSpinner } from "@/components/ButtonSpinner";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -139,7 +140,8 @@ export default function SignupPage() {
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="btn btn-primary w-full">
+            <button type="submit" disabled={loading} aria-busy={loading || undefined} className="btn btn-primary w-full">
+              {loading && <ButtonSpinner />}
               {loading ? "Creating..." : "Create account"}
             </button>
           </form>

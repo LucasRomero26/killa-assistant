@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { AuthLayout } from "@/components/AuthLayout";
+import { ButtonSpinner } from "@/components/ButtonSpinner";
 
 export default function LoginPage() {
   return (
@@ -92,7 +93,8 @@ function LoginForm() {
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="btn btn-primary w-full">
+        <button type="submit" disabled={loading} aria-busy={loading || undefined} className="btn btn-primary w-full">
+          {loading && <ButtonSpinner />}
           {loading ? "Signing in..." : "Sign in"}
         </button>
       </form>

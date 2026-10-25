@@ -1,5 +1,8 @@
-import Link from "next/link";
+"use client";
+
+import { useEffect, useState } from "react";
 import { Unlink } from "lucide-react";
+import { ButtonSpinner } from "./ButtonSpinner";
 import { ServiceLogo, SERVICE_COLOR } from "./ServiceLogo";
 
 interface ConnectionCardProps {
@@ -44,11 +47,28 @@ export function ConnectionCard({
   const cfg = STATUS_CONFIG[status];
   const isConnected = status === "on";
   const brand = SERVICE_COLOR[logo];
+  const [redirecting, setRedirecting] = useState(false);
+
+  // Coming back from Google with the Back button restores this page from the
+  // bfcache with the spinner still on; reset it.
+  useEffect(() => {
+    const reset = (e: PageTransitionEvent) => {
+      if (e.persisted) setRedirecting(false);
+    };
+    window.addEventListener("pageshow", reset);
+    return () => window.removeEventListener("pageshow", reset);
+  }, []);
 
   const primaryButton = action.href ? (
-    <Link href={action.href} className="btn btn-primary w-full">
-      {action.label}
-    </Link>
+    <a
+      href={action.href}
+      onClick={() => setRedirecting(true)}
+      aria-busy={redirecting || undefined}
+      className={`btn btn-primary w-full ${redirecting ? "pointer-events-none opacity-70" : ""}`}
+    >
+      {redirecting && <ButtonSpinner />}
+      {redirecting ? "Redirecting to Google..." : action.label}
+    </a>
   ) : (
     <button className="btn btn-primary w-full" onClick={onActionClick} disabled={!onActionClick}>
       {action.label}
@@ -94,8 +114,9 @@ export function ConnectionCard({
             className="btn btn-danger-ghost w-full"
             onClick={onDisconnect}
             disabled={disconnecting}
+            aria-busy={disconnecting || undefined}
           >
-            <Unlink size={14} />
+            {disconnecting ? <ButtonSpinner /> : <Unlink size={14} />}
             {disconnecting ? "Disconnecting..." : "Disconnect"}
           </button>
         ) : (

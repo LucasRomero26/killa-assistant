@@ -4,6 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { Sparkles, Zap, FileText } from "lucide-react";
+import { ButtonSpinner } from "@/components/ButtonSpinner";
 
 type ResponseMode = "always" | "mentions_only" | "never";
 
@@ -201,7 +202,8 @@ export function BehaviorForm({ userId }: { userId: string }) {
         </div>
       )}
 
-      <button type="submit" disabled={saving} className="btn btn-primary px-6">
+      <button type="submit" disabled={saving} aria-busy={saving || undefined} className="btn btn-primary px-6">
+        {saving && <ButtonSpinner />}
         {saving ? "Saving..." : "Save configuration"}
       </button>
     </form>
