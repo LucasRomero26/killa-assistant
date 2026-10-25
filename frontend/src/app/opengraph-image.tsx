@@ -19,8 +19,6 @@ export default async function OpengraphImage() {
           justifyContent: "space-between",
           padding: 80,
           backgroundColor: "#0b0d14",
-          backgroundImage:
-            "radial-gradient(circle at 15% 20%, rgba(124, 92, 230, 0.45), transparent 55%), radial-gradient(circle at 90% 90%, rgba(60, 160, 220, 0.35), transparent 55%)",
           color: "#eef0f5",
           fontFamily: "sans-serif",
         }}
@@ -33,8 +31,7 @@ export default async function OpengraphImage() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <div style={{ fontSize: 76, fontWeight: 700, lineHeight: 1.1, display: "flex", flexWrap: "wrap" }}>
-            <span>Your assistant,&nbsp;</span>
-            <span style={{ color: "#b49cff" }}>one message away.</span>
+            <span>Your assistant, one message away.</span>
           </div>
           <div style={{ fontSize: 32, color: "#a9adb8", maxWidth: 900 }}>
             Calendar, Drive and voice notes from Telegram — powered by your own encrypted API keys.

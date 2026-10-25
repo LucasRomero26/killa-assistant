@@ -85,7 +85,7 @@ export default function HomePage() {
               Works inside Telegram
             </p>
             <h1 className="font-sans text-4xl text-text-primary md:text-5xl md:leading-[1.05]">
-              Your calendar and files, <span className="text-gradient">one message away.</span>
+              Your calendar and files, one message away.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-text-secondary md:text-lg">
               KillaAssistant is an AI agent that lives in your Telegram chats. Text it, send a voice

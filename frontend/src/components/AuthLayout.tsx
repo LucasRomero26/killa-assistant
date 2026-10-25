@@ -17,35 +17,15 @@ interface AuthLayoutProps {
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className="min-h-dvh grid lg:grid-cols-[1.1fr_1fr]">
-      <aside className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden border-r border-border">
-        <div
-          className="pointer-events-none absolute inset-0"
-          aria-hidden="true"
-          style={{
-            backgroundImage:
-              "radial-gradient(40rem 24rem at 20% 20%, oklch(45% 0.16 285 / 0.35), transparent 60%), radial-gradient(30rem 20rem at 90% 90%, oklch(50% 0.12 225 / 0.28), transparent 60%)",
-          }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          aria-hidden="true"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-            maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
-            WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
-          }}
-        />
-
-        <div className="relative flex items-center gap-3">
+      <aside className="hidden lg:flex flex-col justify-between p-12 border-r border-border">
+        <div className="flex items-center gap-3">
           <Logo size={40} />
           <span className="font-sans text-lg font-semibold tracking-tight">KillaAssistant</span>
         </div>
 
-        <div className="relative max-w-md">
+        <div className="max-w-md">
           <p className="font-sans text-4xl text-text-primary">
-            Your assistant, <span className="text-gradient">one message away.</span>
+            Your assistant, one message away.
           </p>
           <p className="text-text-secondary mt-4 leading-relaxed">
             Delegate calendar, files and notes to an AI agent that lives in your Telegram.
@@ -63,7 +43,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           </ul>
         </div>
 
-        <p className="relative text-xs text-text-tertiary">
+        <p className="text-xs text-text-tertiary">
           <Link href="/privacy" className="hover:text-text-secondary transition-colors">Privacy</Link>
           <span className="mx-2">·</span>
           <Link href="/terms" className="hover:text-text-secondary transition-colors">Terms</Link>
