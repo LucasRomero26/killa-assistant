@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
-import dynamic from "next/dynamic";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "@/components/Providers";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -18,11 +18,6 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   display: "swap",
 });
-
-const SpeedInsights = dynamic(
-  () => import("@vercel/speed-insights/next").then((m) => m.SpeedInsights),
-  { ssr: false }
-);
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

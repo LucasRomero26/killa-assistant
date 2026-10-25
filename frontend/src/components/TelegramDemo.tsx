@@ -68,7 +68,7 @@ function UserBubble({ message }: { message: Extract<Message, { from: "user" }> }
             </div>
           </div>
         )}
-        <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-white/60">
+        <p className="mt-1 flex items-center justify-end gap-1 text-[11px] text-white/80">
           {message.time}
           <Check size={11} />
         </p>
@@ -91,7 +91,7 @@ function BotBubble({ message }: { message: Extract<Message, { from: "bot" }> }) 
             ))}
           </ul>
         )}
-        <p className="mt-1 text-right text-[10px] text-white/50">{message.time}</p>
+        <p className="mt-1 text-right text-[11px] text-white/80">{message.time}</p>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { env } from "../config/env";
+import { safeEqualString } from "../http/auth";
 import {
   sendMessage,
   downloadVoiceMessage,
@@ -151,7 +152,7 @@ export async function handleTelegramWebhook(
 ): Promise<Response> {
   const secretToken = request.headers.get("x-telegram-bot-api-secret-token");
 
-  if (secretToken !== env.TELEGRAM_WEBHOOK_SECRET) {
+  if (!secretToken || !safeEqualString(secretToken, env.TELEGRAM_WEBHOOK_SECRET)) {
     console.warn("Telegram webhook: invalid secret token");
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }

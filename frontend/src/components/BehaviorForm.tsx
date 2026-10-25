@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import useSWR from "swr";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { Sparkles, Zap, FileText } from "lucide-react";
@@ -51,10 +51,12 @@ export function BehaviorForm({ userId }: { userId: string }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [syncedConfig, setSyncedConfig] = useState<BotConfig | undefined>();
 
-  useEffect(() => {
-    if (config) setLocalConfig(config);
-  }, [config]);
+  if (config && config !== syncedConfig) {
+    setSyncedConfig(config);
+    setLocalConfig(config);
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

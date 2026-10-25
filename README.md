@@ -55,7 +55,7 @@ Send a message to the bot on Telegram:
 
 | Component | Technology |
 | :-- | :-- |
-| App | Next.js 14 (App Router + Route Handlers), TypeScript, Tailwind CSS, SWR |
+| App | Next.js 16 (App Router + Route Handlers), TypeScript, Tailwind CSS, SWR |
 | Hosting | Vercel (serverless functions, no server to maintain) |
 | Database | PostgreSQL, Supabase (RLS, Auth) |
 | LLM | NVIDIA NIM (Llama 3.1 70B Instruct) — per-user API key |

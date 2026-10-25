@@ -42,8 +42,8 @@ describe("requireAdmin", () => {
     expect(requireAdmin(req({ "x-admin-token": "super-secret-admin-token" }))).toBeNull();
   });
 
-  it("allows a matching adminToken query param", () => {
-    expect(requireAdmin(req({}, "?adminToken=super-secret-admin-token"))).toBeNull();
+  it("rejects a token sent as a query param", () => {
+    expect(requireAdmin(req({}, "?adminToken=super-secret-admin-token"))?.status).toBe(403);
   });
 
   it("rejects a wrong token with 403", async () => {

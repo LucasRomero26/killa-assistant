@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import useSWR from "swr";
 import { X, Copy, Check, Loader2, ExternalLink } from "lucide-react";
 import { ServiceLogo } from "./ServiceLogo";
@@ -28,9 +28,6 @@ export function TelegramLinkModal({ onLinked, onClose }: TelegramLinkModalProps)
   const [tokenData, setTokenData] = useState<LinkTokenResponse | null>(null);
   const [copied, setCopied] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
-
-  const onLinkedRef = useRef(onLinked);
-  onLinkedRef.current = onLinked;
 
   useEffect(() => {
     let cancelled = false;
@@ -74,7 +71,7 @@ export function TelegramLinkModal({ onLinked, onClose }: TelegramLinkModalProps)
     {
       refreshInterval: 3000,
       onSuccess: (data) => {
-        if (data.linked) onLinkedRef.current();
+        if (data.linked) onLinked();
       },
     }
   );

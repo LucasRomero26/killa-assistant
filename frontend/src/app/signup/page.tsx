@@ -44,6 +44,7 @@ export default function SignupPage() {
         return;
       }
 
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full load so the proxy sees the new session cookie
       window.location.assign("/connections");
     } catch {
       setError("An unexpected error occurred. Please try again.");

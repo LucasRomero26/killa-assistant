@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import useSWR from "swr";
 import { Cpu, Mic, Check, Trash2 } from "lucide-react";
 import { apiFetcher } from "@/lib/swr-fetcher";
@@ -57,9 +57,10 @@ export function ApiConfigForm({ userId }: { userId: string }) {
   const [deleting, setDeleting] = useState<Provider | null>(null);
   const [savedProvider, setSavedProvider] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [syncedConfigs, setSyncedConfigs] = useState<ApiConfigFromBackend[] | undefined>();
 
-  useEffect(() => {
-    if (!apiConfigs) return;
+  if (apiConfigs && apiConfigs !== syncedConfigs) {
+    setSyncedConfigs(apiConfigs);
     const next: Record<Provider, ApiConfigFromBackend | null> = {
       nvidia_nim: null,
       groq: null,
@@ -71,7 +72,7 @@ export function ApiConfigForm({ userId }: { userId: string }) {
       }
     }
     setConfigs(next);
-  }, [apiConfigs]);
+  }
 
   async function saveProvider(provider: Provider) {
     setSaving(provider);

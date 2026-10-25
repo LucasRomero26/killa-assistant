@@ -43,7 +43,7 @@ function LoginForm() {
       }
 
       // Full navigation (not router.push + refresh): one request, the
-      // middleware sees the fresh session cookie, no stale router cache.
+      // proxy sees the fresh session cookie, no stale router cache.
       window.location.assign(redirectTo.startsWith("/") ? redirectTo : "/connections");
     } catch {
       setError("An unexpected error occurred. Please try again.");

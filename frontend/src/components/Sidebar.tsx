@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { LayoutGrid, Brain, Key, X, Menu, LogOut, ExternalLink } from "lucide-react";
 import { Logo } from "./Logo";
@@ -16,12 +16,9 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const mobileOpen = openedAt === pathname;
   const [loggingOut, setLoggingOut] = useState(false);
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -40,7 +37,7 @@ export function Sidebar() {
       {mobileOpen && (
         <div
           className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-          onClick={() => setMobileOpen(false)}
+          onClick={() => setOpenedAt(null)}
         />
       )}
 
@@ -58,7 +55,7 @@ export function Sidebar() {
             </span>
           </Link>
           <button
-            onClick={() => setMobileOpen(false)}
+            onClick={() => setOpenedAt(null)}
             aria-label="Close menu"
             className="md:hidden text-text-secondary hover:text-text-primary transition-colors"
           >
@@ -126,7 +123,7 @@ export function Sidebar() {
           <span className="font-sans text-[15px] font-semibold tracking-tight text-text-primary">KillaAssistant</span>
         </div>
         <button
-          onClick={() => setMobileOpen(true)}
+          onClick={() => setOpenedAt(pathname)}
           aria-label="Open menu"
           className="text-text-secondary hover:text-text-primary transition-colors"
         >

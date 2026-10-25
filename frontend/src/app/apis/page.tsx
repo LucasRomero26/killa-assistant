@@ -16,7 +16,7 @@ export const metadata = pageMetadata({
 
 export default async function ApisPage() {
   const supabase = await createSupabaseServerClient();
-  // getSession() parses the cookie locally; the middleware already validated
+  // getSession() parses the cookie locally; the proxy already validated
   // it, and every proxied request re-verifies the JWT on the backend.
   const { data: { session } } = await supabase.auth.getSession();
 

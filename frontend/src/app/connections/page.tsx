@@ -10,7 +10,7 @@ export const metadata = pageMetadata({
   index: false,
 });
 
-// The middleware guards this route; statuses load client-side so the shell
+// The proxy guards this route; statuses load client-side so the shell
 // paints immediately instead of waiting on the backend.
 export default function ConnectionsPage() {
   return (

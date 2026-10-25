@@ -9,7 +9,7 @@ export function Logo({ size = 28, className = "" }: LogoProps) {
   return (
     <Image
       src="/logo.png"
-      alt="KillaAssistant"
+      alt=""
       width={size}
       height={size}
       className={`rounded-lg ${className}`}
