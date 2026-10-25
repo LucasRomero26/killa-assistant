@@ -6,8 +6,10 @@ vi.mock("@/lib/supabase-server", () => ({
   createSupabaseServerClient: () => Promise.resolve({ auth: { getUser: mockGetUser } }),
 }));
 
+const mockAdminToken = vi.fn<() => string | undefined>(() => "super-secret-admin-token");
+
 vi.mock("@/server/config/env", () => ({
-  env: { ADMIN_TOKEN: "super-secret-admin-token" },
+  readAdminToken: () => mockAdminToken(),
 }));
 
 import { getSessionUserId, requireAdmin } from "@/server/http/auth";
@@ -53,5 +55,10 @@ describe("requireAdmin", () => {
 
   it("rejects a missing token with 403", () => {
     expect(requireAdmin(req())?.status).toBe(403);
+  });
+
+  it("answers 503 when ADMIN_TOKEN is not configured", () => {
+    mockAdminToken.mockReturnValueOnce(undefined);
+    expect(requireAdmin(req({ "x-admin-token": "anything" }))?.status).toBe(503);
   });
 });

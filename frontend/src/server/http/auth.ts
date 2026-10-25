@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { env } from "../config/env";
+import { readAdminToken } from "../config/env";
 
 /**
  * Resolve the signed-in user from the Supabase session cookie.
@@ -26,7 +26,7 @@ export async function getSessionUserId(): Promise<string | null> {
  * Returns an error Response to send back, or null when the caller is allowed.
  */
 export function requireAdmin(request: Request): Response | null {
-  const adminToken = env.ADMIN_TOKEN;
+  const adminToken = readAdminToken();
   if (!adminToken) {
     return Response.json({ error: "ADMIN_TOKEN is not configured on the server" }, { status: 503 });
   }

@@ -12,6 +12,7 @@ export async function GET(request: Request) {
   try {
     return json(await getWebhookInfo());
   } catch (error) {
+    console.error("Failed to read Telegram webhook info", error);
     return serverError((error as Error).message);
   }
 }

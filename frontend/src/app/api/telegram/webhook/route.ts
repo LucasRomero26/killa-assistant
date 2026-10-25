@@ -13,6 +13,7 @@ export async function DELETE(request: Request) {
     await deleteWebhook();
     return json({ ok: true, message: "Webhook deleted" });
   } catch (error) {
+    console.error("Failed to delete Telegram webhook", error);
     return serverError((error as Error).message);
   }
 }

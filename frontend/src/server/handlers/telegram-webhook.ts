@@ -152,7 +152,15 @@ export async function handleTelegramWebhook(
 ): Promise<Response> {
   const secretToken = request.headers.get("x-telegram-bot-api-secret-token");
 
-  if (!secretToken || !safeEqualString(secretToken, env.TELEGRAM_WEBHOOK_SECRET)) {
+  let expectedSecret: string;
+  try {
+    expectedSecret = env.TELEGRAM_WEBHOOK_SECRET;
+  } catch (error) {
+    console.error("Telegram webhook: server environment is invalid:", (error as Error).message);
+    return Response.json({ error: "Server misconfigured" }, { status: 500 });
+  }
+
+  if (!secretToken || !safeEqualString(secretToken, expectedSecret)) {
     console.warn("Telegram webhook: invalid secret token");
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }

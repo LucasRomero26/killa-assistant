@@ -67,6 +67,8 @@ function loadEnv(): Env {
   const parsed = envSchema.safeParse(raw);
   if (!parsed.success) {
     const fields = parsed.error.flatten().fieldErrors;
+    // Variable names and validation messages only, never the values.
+    console.error("[env] Invalid server environment:", JSON.stringify(fields));
     throw new Error(`Invalid server environment: ${JSON.stringify(fields)}`);
   }
   return parsed.data;
@@ -80,6 +82,15 @@ export const env: Env = new Proxy({} as Env, {
     return cached[prop as keyof Env];
   },
 });
+
+/**
+ * The operator token, read without validating the rest of the environment.
+ * Admin endpoints must still authenticate when another variable is broken,
+ * so the operator can reach them and read which one failed.
+ */
+export function readAdminToken(): string | undefined {
+  return process.env.ADMIN_TOKEN || undefined;
+}
 
 /** Test hook: forget the cached environment so the next access re-parses. */
 export function resetEnvCache(): void {

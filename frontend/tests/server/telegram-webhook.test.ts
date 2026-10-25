@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const envState = vi.hoisted(() => ({ broken: false }));
+
 vi.mock("@/server/config/env", () => ({
   env: {
-    TELEGRAM_WEBHOOK_SECRET: "test-telegram-webhook-secret-min-32-chars",
+    get TELEGRAM_WEBHOOK_SECRET() {
+      if (envState.broken) throw new Error("Invalid server environment");
+      return "test-telegram-webhook-secret-min-32-chars";
+    },
     TELEGRAM_BOT_TOKEN: "test-token",
   },
 }));
@@ -57,6 +62,7 @@ describe("Telegram webhook handler", () => {
     vi.clearAllMocks();
     vi.mocked(sendMessage).mockResolvedValue(undefined);
     vi.mocked(isValidTelegramUpdate).mockReturnValue(true);
+    envState.broken = false;
   });
 
   it("should reject requests without valid secret token", async () => {
@@ -66,6 +72,18 @@ describe("Telegram webhook handler", () => {
     });
 
     expect(res.status).toBe(403);
+    expect(scheduled).toBe(0);
+  });
+
+  it("should answer a JSON 500 when the server environment is invalid", async () => {
+    envState.broken = true;
+    const { res, scheduled } = await post(
+      { update_id: 1 },
+      { "x-telegram-bot-api-secret-token": SECRET }
+    );
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Server misconfigured" });
     expect(scheduled).toBe(0);
   });
 
